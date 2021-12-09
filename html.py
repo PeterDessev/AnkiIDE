@@ -126,6 +126,10 @@ class Highlighter(QSyntaxHighlighter):
                     scriptLength = len(text) - ScriptIndex
                 else:
                     scriptLength = endIndex - ScriptIndex + endMatch.capturedLength()
+                
+                if(ScriptIndex >= 0):
+                    ScriptIndex += self.scriptStartExpression.match(
+                        text).capturedLength()
 
                 # Format the script tag according to the JS rules in __init__
                 for pattern, format in self.scriptHighlightingRules:
@@ -133,16 +137,16 @@ class Highlighter(QSyntaxHighlighter):
 
                     # Get the first match
                     match: QRegularExpressionMatch = expression.match(text, ScriptIndex)
-                    while match.capturedStart() >= 0:
+                    while match.capturedStart() >= 0 and match.capturedLength() > 0:
                         # Format the current match, making sure to stay inside of script tags
-                        if(endIndex == -1 or match.capturedStart() + match.capturedLength() < endIndex):
+                        if(endIndex == -1 or match.capturedStart() + match.capturedLength() <= endIndex):
                             self.setFormat(match.capturedStart(), match.capturedLength(), format)
                             match = expression.match(text, match.capturedStart() + match.capturedLength())
-                        elif(endIndex != -1 and match.capturedStart() < endIndex):
+                        elif(match.capturedStart() < endIndex):
                             self.setFormat(match.capturedStart(), endIndex - match.capturedStart(), format)
                             match = expression.match(text, endIndex)
                             break;
-                        elif(endIndex != -1):
+                        else:
                             match = expression.match(text, endIndex)
                             break;
 
