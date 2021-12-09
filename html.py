@@ -7,65 +7,184 @@ class Highlighter(QSyntaxHighlighter):
     def __init__(self, parent=None):
         super(Highlighter, self).__init__(parent)
 
+        # HMTL Highlighting rules
+        # Tags such as <p> or <div>, not inlcluding the 
+        # angle brackets
         tagFormat = QTextCharFormat()
         tagFormat.setForeground(QColor(0xF9, 0x26, 0x72))
-        self.highlightingRules = [(QRegularExpression(r"(?:(?<=<)|(?<=<\/))[A-Za-z]+\b"),
+        self.htmlHighlightingRules = [(QRegularExpression(r"(?:(?<=<)|(?<=<\/))[A-Za-z0-9_-]+"),
                                    tagFormat)]
 
-        self.multiLineCommentFormat = QTextCharFormat()
-        self.multiLineCommentFormat.setForeground(QColor(0x75, 0x71, 0x5E))
-
+        # Attributes that go inside tags such as id or class
         attributeFormat = QTextCharFormat()
         attributeFormat.setForeground(QColor(0xA6, 0xE2, 0x2E))
-        self.highlightingRules.append(
-            (QRegularExpression(r"(?<=\s)[A-Za-z0-9_-]*[\s*]*(?=[=>])"), attributeFormat))
+        self.htmlHighlightingRules.append(
+            (QRegularExpression(r"(?<=\s)[A-Za-z0-9_-]+\s*(?=[\=>])"), attributeFormat))
 
+        # Moustache is the Anki specific "{{field}}" notation,
+        # I'm not sure what the technical term for it is. 
         moustacheFormat = QTextCharFormat()
         moustacheFormat.setForeground(QColor(0x66, 0xD9, 0xEF))
-        self.highlightingRules.append(
+        self.htmlHighlightingRules.append(
             (QRegularExpression(r"\{\{.*\}\}"), moustacheFormat))
 
+        # String literals that fall inside of single or double quotes
         quotationFormat = QTextCharFormat()
         quotationFormat.setForeground(QColor(0xE6, 0xDB, 0x74))
-        self.highlightingRules.append(
-            (QRegularExpression("\".*\""), quotationFormat))
-        self.highlightingRules.append(
-            (QRegularExpression("\'.*\'"), quotationFormat))
+        self.htmlHighlightingRules.append(
+            (QRegularExpression("\".*?\""), quotationFormat))
+        self.htmlHighlightingRules.append(
+            (QRegularExpression("\'.*?\'"), quotationFormat))
 
-        self.commentStartExpression = QRegularExpression("<!--*")
+        # HTML single and multiline comments use the same escape sequence
+        # Comment format
+        self.multiLineCommentFormat = QTextCharFormat()
+        self.multiLineCommentFormat.setForeground(QColor(0x75, 0x71, 0x5E))
+        # Comment regex, because comments can be multiline, a different
+        # method of matching is used
+        self.commentStartExpression = QRegularExpression("<!--")
         self.commentEndExpression = QRegularExpression("-->")
 
-    def highlightBlock(self, text):
-        for pattern, format in self.highlightingRules:
+
+        # Script tags can contain js dirrectly and therefore require a 
+        # special case for highlighting
+        self.scriptStartExpression = QRegularExpression(r"\<script\>")
+        self.scriptEndExpression = QRegularExpression(r"\<\/script\>")
+
+
+        # JS Highlighting rules
+        self.scriptHighlightingRules = [(QRegularExpression(r".*"),
+                                   tagFormat)]
+    def highlightBlock(self, text: str):
+        NoState = 0
+        CommentState = 1
+        ScriptState = 2
+
+        CommentIndex = 0
+        ScriptIndex = 0
+        
+        # Highlight all of the basic HTML rules such as:
+        # Tags, Attributes, and string literals
+        for pattern, format in self.htmlHighlightingRules:
             expression = QRegularExpression(pattern)
-            index: QRegularExpressionMatch = expression.match(text)
-            while index.capturedStart() >= 0:
-                length = index.capturedLength()
-                self.setFormat(index.capturedStart(), length, format)
-                index = expression.match(text, index.capturedStart() + length)
+            match: QRegularExpressionMatch = expression.match(text)
+            while match.capturedStart() >= 0:
+                length = match.capturedLength()
+                self.setFormat(match.capturedStart(), length, format)
+                match = expression.match(text, match.capturedStart() + length)
 
-        self.setCurrentBlockState(0)
+        # Reset current block's state
+        self.setCurrentBlockState(NoState)
 
-        startIndex = 0
-        if self.previousBlockState() != 1:
-            startIndex = self.commentStartExpression.match(
+        # If there is no previous state, we check if there is
+        # a comment, a script tag, or both in the block
+        if self.previousBlockState() == NoState:
+            CommentIndex = self.commentStartExpression.match(
+                text).capturedStart()
+            ScriptIndex = self.scriptStartExpression.match(
                 text).capturedStart()
 
-        while startIndex >= 0:
-            endMatch = self.commentEndExpression.match(text, startIndex)
-            endIndex = endMatch.capturedStart()
+        # If there is a previous comment state that means we keep highlighting like a comment
+        # If there is no previous state, we check if there is no script tag in the block
+        # or if the comment tag comes before the script tag in the block,
+        # an highlight as a comment 
+        if(self.previousBlockState() is CommentState or (CommentIndex >= 0 and
+        (self.previousBlockState() is NoState and (ScriptIndex < 0 or CommentIndex < ScriptIndex)))):
+            # Not sure why this is in a loop, it was in the example,
+            # and it works without the loop, however, I don't want to 
+            # remove it yet....
+            while CommentIndex >= 0:
+                endMatch = self.commentEndExpression.match(text, CommentIndex)
+                endIndex = endMatch.capturedStart()
 
-            if endIndex == -1:
-                self.setCurrentBlockState(1)
-                commentLength = len(text) - startIndex
-            else:
-                commentLength = endIndex - startIndex + endMatch.capturedLength()
+                if endIndex == -1:
+                    self.setCurrentBlockState(CommentState)
+                    commentLength = len(text) - CommentIndex
+                else:
+                    commentLength = endIndex - CommentIndex + endMatch.capturedLength()
 
-            self.setFormat(startIndex, commentLength,
-                           self.multiLineCommentFormat)
-            startIndex = self.commentStartExpression.match(
-                text, startIndex + commentLength).capturedStart()
+                self.setFormat(CommentIndex, commentLength,
+                            self.multiLineCommentFormat)
+                CommentIndex = self.commentStartExpression.match(
+                    text, CommentIndex + commentLength).capturedStart()
 
+
+
+        # If there is a previous script state that means we keep highlighting like a script
+        # If there is no previous state, we check if there is no comment tag in the block
+        # or if the script tag comes before the comment tag in the block,
+        # an highlight as a script 
+        elif(self.previousBlockState() is ScriptState or 
+        (self.previousBlockState() is NoState and (CommentIndex < 0 or ScriptIndex < CommentIndex))):
+            # Highlight JS
+            while ScriptIndex >= 0:
+                endMatch = self.scriptEndExpression.match(text, ScriptIndex)
+                endIndex = endMatch.capturedStart()
+
+                if endIndex == -1:
+                    self.setCurrentBlockState(ScriptState)
+                    scriptLength = len(text) - ScriptIndex
+                else:
+                    scriptLength = endIndex - ScriptIndex + endMatch.capturedLength()
+
+                # Format the script tag according to the JS rules in __init__
+                for pattern, format in self.scriptHighlightingRules:
+                    expression = QRegularExpression(pattern)
+
+                    # Get the first match
+                    match: QRegularExpressionMatch = expression.match(text, ScriptIndex)
+                    while match.capturedStart() >= 0:
+                        # Format the current match, making sure to stay inside of script tags
+                        if(endIndex == -1 or match.capturedStart() + match.capturedLength() < endIndex):
+                            self.setFormat(match.capturedStart(), match.capturedLength(), format)
+                            match = expression.match(text, match.capturedStart() + match.capturedLength())
+                        elif(endIndex != -1 and match.capturedStart() < endIndex):
+                            self.setFormat(match.capturedStart(), endIndex - match.capturedStart(), format)
+                            match = expression.match(text, endIndex)
+                            break;
+                        elif(endIndex != -1):
+                            match = expression.match(text, endIndex)
+                            break;
+
+                # self.setFormat(ScriptIndex, scriptLength,
+                #             self.multiLineCommentFormat)
+                ScriptIndex = self.scriptStartExpression.match(
+                    text, ScriptIndex + scriptLength).capturedStart()
+
+            # endMatch = self.commentEndExpression.match(text, CommentIndex)
+            # endIndex = endMatch.capturedStart()
+            # ofset = 0 
+
+            # if(endIndex == -1):
+            #     ofset = text.__len__()
+            # else:
+            #     ofset = expression.match(text.substr )
+                
+            # for pattern, format in self.scriptHighlightingRules:
+            #     expression = QRegularExpression(pattern)
+
+            #     # Get the first match
+            #     match: QRegularExpressionMatch = expression.match(text)
+            #     while match.capturedStart() >= 0:
+            #         # Format the current match
+            #         self.setFormat(match.capturedStart(), match.capturedLength(), format)
+            #         # Get the next match
+            #         match = expression.match(text, match.capturedStart() + length)
+
+            # while ScriptIndex >= 0:
+            #     endMatch = self.commentEndExpression.match(text, CommentIndex)
+            #     endIndex = endMatch.capturedStart()
+
+            #     if endIndex == -1:
+            #         self.setCurrentBlockState(1)
+            #         commentLength = len(text) - CommentIndex
+            #     else:
+            #         commentLength = endIndex - CommentIndex + endMatch.capturedLength()
+
+            #     self.setFormat(CommentIndex, commentLength,
+            #                 self.multiLineCommentFormat)
+            #     CommentIndex = self.commentStartExpression.match(
+            #         text, CommentIndex + commentLength).capturedStart()
 
 # from typing import Match, Pattern
 # from aqt.qt import *
