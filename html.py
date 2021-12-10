@@ -50,15 +50,18 @@ class Highlighter(QSyntaxHighlighter):
         self.scriptEndExpression = QRegularExpression(r"\<\/script\>")
 
 
+        # Regex has so many highlighting rules that it is easier to treat
+        # it like a script or comment tag, despite being only allowed on one line
+        self.regexStartExpression = QRegularExpression(r"\/.*?\/")
+
 
         # JS Highlighting rules
-        method = [r"\w*\s*(?=\()"]
+        # add: function (t) {
+        method = [r"\w*\s*(?=\()", r"(?<=var)\s*\w*\s*=\s*function\s*(?=\()", r"(?<=\W)\w*\s*:\s*function\s*(?=\()"]
         methodFormat = QTextCharFormat()
         methodFormat.setForeground(QColor(0xA6, 0xE2, 0x2E))
         self.scriptHighlightingRules = [(QRegularExpression(word), methodFormat)
                                         for word in method]
-        for word in method:
-            self.scriptHighlightingRules.append((QRegularExpression(word), methodFormat))
 
         keywords = [r"(?<!\w)abstract(?!\w)", r"(?<!\w)arguments(?!\w)", r"(?<!\w)oolean(?!\w)", r"(?<!\w)break(?!\w)", r"(?<!\w)byte(?!\w)",
                     r"(?<!\w)case(?!\w)", r"(?<!\w)catch(?!\w)", r"(?<!\w)char(?!\w)", r"(?<!\w)const(?!\w)", r"(?<!\w)continue(?!\w)", 
@@ -95,13 +98,26 @@ class Highlighter(QSyntaxHighlighter):
         numberFormat = QTextCharFormat()
         numberFormat.setForeground(QColor(0xAE, 0x81, 0xFF))
         for word in numbers:
-            self.scriptHighlightingRules.append((QRegularExpression(word), numberFormat))
+            self.scriptHighlightingRules.append((QRegularExpression(word), numberFormat))        
+        
+        jsThis = [r"(?<!\w)void(?!\w)"]
+        jsThisFormat = QTextCharFormat()
+        jsThisFormat.setForeground(QColor(0xFD, 0x97, 0x1F))
+        for word in jsThis:
+            self.scriptHighlightingRules.append((QRegularExpression(word), jsThisFormat))
 
         strings = [r"(?:\"[^\"\\]*(?:\\.[^\"\\]*)*\")", r"(?:'[^'\\]*(?:\\.[^'\\]*)*')"]
         stringFormat = QTextCharFormat()
         stringFormat.setForeground(QColor(0xE6, 0xDB, 0x74))
         for word in strings:
             self.scriptHighlightingRules.append((QRegularExpression(word), stringFormat))
+
+        # Regex Highlighting rules
+        regexClass = [r"(?:\[[^\[\\]*(?:\\.[^\[\\]*)*\])"]
+        regexClassFormat = QTextCharFormat()
+        regexClassFormat.setForeground(QColor(0xAE, 0x81, 0xFF))
+        for word in regexClass:
+            self.regexHighlightingRules = [(QRegularExpression(word), regexClassFormat)]
 
     def highlightBlock(self, text: str):
         NoState = 0
@@ -141,7 +157,7 @@ class Highlighter(QSyntaxHighlighter):
         # or if the comment tag comes before the script tag in the block,
         # an highlight as a comment
         if(self.previousBlockState() is CommentState or (CommentIndex >= 0 and
-                                                         (self.previousBlockState() is NoState and (ScriptIndex < 0 or CommentIndex < ScriptIndex)))):
+            (self.previousBlockState() is NoState and (ScriptIndex < 0 or CommentIndex < ScriptIndex)))):
             # Not sure why this is in a loop, it was in the example,
             # and it works without the loop, however, I don't want to
             # remove it yet....
@@ -165,7 +181,7 @@ class Highlighter(QSyntaxHighlighter):
         # or if the script tag comes before the comment tag in the block,
         # an highlight as a script
         elif(self.previousBlockState() is ScriptState or
-             (self.previousBlockState() is NoState and (CommentIndex < 0 or ScriptIndex < CommentIndex))):
+            (self.previousBlockState() is NoState and (CommentIndex < 0 or ScriptIndex < CommentIndex))):
             # Highlight JS
             while ScriptIndex >= 0:
                 endMatch = self.scriptEndExpression.match(text, ScriptIndex)

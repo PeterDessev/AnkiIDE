@@ -19,8 +19,8 @@ from aqt import gui_hooks
 from aqt import QTextEdit
 from aqt.utils import showInfo
 
-import debugpy
-debugpy.listen(("localhost", 5678))
+# import debugpy
+# debugpy.listen(("localhost", 5678))
 
 def setUp(clayout: CardLayout) -> None:
     mw.my_widgets = []
@@ -54,8 +54,8 @@ def setUp(clayout: CardLayout) -> None:
     return
 
 gui_hooks.card_layout_will_show.append(setUp)
-print('Now is a good time to attach your debugger: Run: Python: Attach')
-debugpy.wait_for_client()
+# print('Now is a good time to attach your debugger: Run: Python: Attach')
+# debugpy.wait_for_client()
 
 # highlighters = {'html': html.HtmlHighlighter,
 #                 'css': css.CssHighlighter}
