@@ -16,10 +16,46 @@ from PyQt5 import QtWidgets
 from PyQt5.QtGui import QColor
 from aqt.clayout import CardLayout
 from aqt import gui_hooks
+from aqt import QTextEdit
 from aqt.utils import showInfo
 
 import debugpy
 debugpy.listen(("localhost", 5678))
+
+def setUp(clayout: CardLayout) -> None:
+    mw.my_widgets = []
+    editor = clayout.tform.edit_area
+    # languages = ('html', 'css')
+
+    # try:
+    #     config = mw.addonManager.getConfig(__name__)
+    # except AttributeError:
+    #     config = DEFAULT_CONFIG
+
+    # profiles = {}
+    # for language in languages:
+    #     try:
+    #         profile_name = config['user'][language]
+    #     except KeyError:
+    #         profile_name = 'default'
+    #     profiles[language] = config[language][profile_name]
+
+    # TODO: Implement Font choice
+    # if config['font'] is not 'default':
+        # monospace = QFont('Areal')
+        # monospace.setStyleHint(QFont.TypeWriter)
+        # mw.my_widgets.append(monospace)
+        # editor.setFont(monospace)
+
+    highlighter_widget = html.Highlighter(editor.document())
+    mw.my_widgets.append(highlighter_widget)
+    editor.setLineWrapMode(QTextEdit.NoWrap)
+    # editor.setLineWrapColumnOrWidth(0)
+    return
+
+gui_hooks.card_layout_will_show.append(setUp)
+print('Now is a good time to attach your debugger: Run: Python: Attach')
+debugpy.wait_for_client()
 
 # highlighters = {'html': html.HtmlHighlighter,
 #                 'css': css.CssHighlighter}
@@ -71,36 +107,3 @@ debugpy.listen(("localhost", 5678))
 
 #     CardLayout.readCard = wrap(CardLayout.readCard, attach_highlighter)
 
-
-def setUp(clayout: CardLayout) -> None:
-    mw.my_widgets = []
-    editor = clayout.tform.edit_area
-    # languages = ('html', 'css')
-
-    # try:
-    #     config = mw.addonManager.getConfig(__name__)
-    # except AttributeError:
-    #     config = DEFAULT_CONFIG
-
-    # profiles = {}
-    # for language in languages:
-    #     try:
-    #         profile_name = config['user'][language]
-    #     except KeyError:
-    #         profile_name = 'default'
-    #     profiles[language] = config[language][profile_name]
-
-    # TODO: Implement Font choice
-    # if config['font'] is not 'default':
-        # monospace = QFont('Areal')
-        # monospace.setStyleHint(QFont.TypeWriter)
-        # mw.my_widgets.append(monospace)
-        # editor.setFont(monospace)
-
-    highlighter_widget = html.Highlighter(editor.document())
-    mw.my_widgets.append(highlighter_widget)
-    return
-
-gui_hooks.card_layout_will_show.append(setUp)
-print('Now is a good time to attach your debugger: Run: Python: Attach')
-debugpy.wait_for_client()

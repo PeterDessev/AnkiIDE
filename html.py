@@ -1,6 +1,5 @@
-from PyQt5.QtCore import QCollator, QRegularExpression, QRegularExpressionMatch, Qt
-from PyQt5.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit
+from PyQt5.QtCore import QRegularExpression, QRegularExpressionMatch
+from PyQt5.QtGui import QColor, QSyntaxHighlighter, QTextCharFormat
 
 
 class Highlighter(QSyntaxHighlighter):
@@ -8,12 +7,12 @@ class Highlighter(QSyntaxHighlighter):
         super(Highlighter, self).__init__(parent)
 
         # HMTL Highlighting rules
-        # Tags such as <p> or <div>, not inlcluding the 
+        # Tags such as <p> or <div>, not inlcluding the
         # angle brackets
         tagFormat = QTextCharFormat()
         tagFormat.setForeground(QColor(0xF9, 0x26, 0x72))
         self.htmlHighlightingRules = [(QRegularExpression(r"(?:(?<=<)|(?<=<\/))[A-Za-z0-9_-]+"),
-                                   tagFormat)]
+                                       tagFormat)]
 
         # Attributes that go inside tags such as id or class
         attributeFormat = QTextCharFormat()
@@ -22,39 +21,88 @@ class Highlighter(QSyntaxHighlighter):
             (QRegularExpression(r"(?<=\s)[A-Za-z0-9_-]+\s*(?=[\=>])"), attributeFormat))
 
         # Moustache is the Anki specific "{{field}}" notation,
-        # I'm not sure what the technical term for it is. 
+        # I'm not sure what the technical term for it is.
         moustacheFormat = QTextCharFormat()
         moustacheFormat.setForeground(QColor(0x66, 0xD9, 0xEF))
         self.htmlHighlightingRules.append(
             (QRegularExpression(r"\{\{.*\}\}"), moustacheFormat))
 
         # String literals that fall inside of single or double quotes
-        quotationFormat = QTextCharFormat()
-        quotationFormat.setForeground(QColor(0xE6, 0xDB, 0x74))
+        keywordFormat = QTextCharFormat()
+        keywordFormat.setForeground(QColor(0xE6, 0xDB, 0x74))
         self.htmlHighlightingRules.append(
-            (QRegularExpression("\".*?\""), quotationFormat))
+            (QRegularExpression(r"(?:\"[^\"\\]*(?:\\.[^\"\\]*)*\")"), keywordFormat))
         self.htmlHighlightingRules.append(
-            (QRegularExpression("\'.*?\'"), quotationFormat))
+            (QRegularExpression(r"(?:'[^'\\]*(?:\\.[^'\\]*)*')"), keywordFormat))
 
         # HTML single and multiline comments use the same escape sequence
         # Comment format
         self.multiLineCommentFormat = QTextCharFormat()
         self.multiLineCommentFormat.setForeground(QColor(0x75, 0x71, 0x5E))
         # Comment regex, because comments can be multiline, a different
-        # method of matching is used
+        # method for highlighting is used
         self.commentStartExpression = QRegularExpression("<!--")
         self.commentEndExpression = QRegularExpression("-->")
 
-
-        # Script tags can contain js dirrectly and therefore require a 
+        # Script tags can contain js dirrectly and therefore require a
         # special case for highlighting
         self.scriptStartExpression = QRegularExpression(r"\<script\>")
         self.scriptEndExpression = QRegularExpression(r"\<\/script\>")
 
 
+
         # JS Highlighting rules
-        self.scriptHighlightingRules = [(QRegularExpression(r".*"),
-                                   tagFormat)]
+        method = [r"\w*\s*(?=\()"]
+        methodFormat = QTextCharFormat()
+        methodFormat.setForeground(QColor(0xA6, 0xE2, 0x2E))
+        self.scriptHighlightingRules = [(QRegularExpression(word), methodFormat)
+                                        for word in method]
+        for word in method:
+            self.scriptHighlightingRules.append((QRegularExpression(word), methodFormat))
+
+        keywords = [r"(?<!\w)abstract(?!\w)", r"(?<!\w)arguments(?!\w)", r"(?<!\w)oolean(?!\w)", r"(?<!\w)break(?!\w)", r"(?<!\w)byte(?!\w)",
+                    r"(?<!\w)case(?!\w)", r"(?<!\w)catch(?!\w)", r"(?<!\w)char(?!\w)", r"(?<!\w)const(?!\w)", r"(?<!\w)continue(?!\w)", 
+                    r"(?<!\w)debugger(?!\w)", r"(?<!\w)default(?!\w)", r"(?<!\w)delete(?!\w)", r"(?<!\w)do(?!\w)", r"(?<!\w)double(?!\w)", 
+                    r"(?<!\w)else(?!\w)", r"(?<!\w)eval(?!\w)", r"(?<!\w)false(?!\w)", r"(?<!\w)final(?!\w)", r"(?<!\w)finally(?!\w)", 
+                    r"(?<!\w)float(?!\w)", r"(?<!\w)for(?!\w)", r"(?<!\w)goto(?!\w)", r"(?<!\w)if(?!\w)", 
+                    r"(?<!\w)implements(?!\w)", r"(?<!\w)in(?!\w)", r"(?<!\w)instanceof(?!\w)", r"(?<!\w)int(?!\w)", r"(?<!\w)interface(?!\w)",
+                    r"(?<!\w)long(?!\w)", r"(?<!\w)native(?!\w)", r"(?<!\w)new(?!\w)", r"(?<!\w)null(?!\w)", r"(?<!\w)package(?!\w)",
+                    r"(?<!\w)private(?!\w)", r"(?<!\w)protected(?!\w)", r"(?<!\w)public(?!\w)", r"(?<!\w)return(?!\w)", r"(?<!\w)short(?!\w)", 
+                    r"(?<!\w)static(?!\w)", r"(?<!\w)switch(?!\w)", r"(?<!\w)synchronized(?!\w)", r"(?<!\w)this(?!\w)", r"(?<!\w)throw(?!\w)", 
+                    r"(?<!\w)throws(?!\w)", r"(?<!\w)transient(?!\w)", r"(?<!\w)true(?!\w)", r"(?<!\w)try(?!\w)", r"(?<!\w)typeof(?!\w)", 
+                    r"(?<!\w)void(?!\w)", r"(?<!\w)volatile(?!\w)", r"(?<!\w)while(?!\w)", r"(?<!\w)with(?!\w)", r"(?<!\w)yield(?!\w)"]
+        keywordFormat = QTextCharFormat()
+        keywordFormat.setForeground(QColor(0xF9, 0x26, 0x72))
+        for word in keywords:
+            self.scriptHighlightingRules.append((QRegularExpression(word), keywordFormat))
+
+        operators = [r"\!", r"\|", r"\=", r"\&", r"\-", r"\*", r"\/", r"\^", r"\%", r"\+",
+                     r"\<", r"\>", r"(?<!\w)typeof(?!\w)",  r"(?<!\w)instanceof(?!\w)",
+                     r"\~"]
+        operatorFormat = QTextCharFormat()
+        operatorFormat.setForeground(QColor(0xF9, 0x26, 0x72))
+        for word in operators:
+            self.scriptHighlightingRules.append((QRegularExpression(word), operatorFormat))
+            
+        declarations = [r"(?<!\w)var(?!\w)", r"(?<!\w)function(?!\w)", r"(?<!\w)let(?!\w)"]
+        declarationFormat = QTextCharFormat()
+        declarationFormat.setForeground(QColor(0x66, 0xD9, 0xEF))
+        for word in declarations:
+            self.scriptHighlightingRules.append((QRegularExpression(word), declarationFormat))
+
+        numbers = [r"(?<!\w)null(?!\w)", r"(?<!\w)\-?[0-9]+\.?[0-9]*(?:[eE]\-?[0-9]*)?(?!\w)", 
+            r"(?<!\w)\-?[0-9]*\.?[0-9]+(?:[eE]\-?[0-9]*)?(?!\w)", r"(?<!\w)0b[0-1]*(?!\w)", r"(?<!\w)0x[0-9a-fA-F]*(?!\w)"]
+        numberFormat = QTextCharFormat()
+        numberFormat.setForeground(QColor(0xAE, 0x81, 0xFF))
+        for word in numbers:
+            self.scriptHighlightingRules.append((QRegularExpression(word), numberFormat))
+
+        strings = [r"(?:\"[^\"\\]*(?:\\.[^\"\\]*)*\")", r"(?:'[^'\\]*(?:\\.[^'\\]*)*')"]
+        stringFormat = QTextCharFormat()
+        stringFormat.setForeground(QColor(0xE6, 0xDB, 0x74))
+        for word in strings:
+            self.scriptHighlightingRules.append((QRegularExpression(word), stringFormat))
+
     def highlightBlock(self, text: str):
         NoState = 0
         CommentState = 1
@@ -62,7 +110,11 @@ class Highlighter(QSyntaxHighlighter):
 
         CommentIndex = 0
         ScriptIndex = 0
-        
+
+        clearedFormat = QTextCharFormat()
+        clearedFormat.setForeground(QColor(0xFF, 0xFF, 0xFF))
+        clearedFormat.setFontItalic(False)
+
         # Highlight all of the basic HTML rules such as:
         # Tags, Attributes, and string literals
         for pattern, format in self.htmlHighlightingRules:
@@ -87,11 +139,11 @@ class Highlighter(QSyntaxHighlighter):
         # If there is a previous comment state that means we keep highlighting like a comment
         # If there is no previous state, we check if there is no script tag in the block
         # or if the comment tag comes before the script tag in the block,
-        # an highlight as a comment 
+        # an highlight as a comment
         if(self.previousBlockState() is CommentState or (CommentIndex >= 0 and
-        (self.previousBlockState() is NoState and (ScriptIndex < 0 or CommentIndex < ScriptIndex)))):
+                                                         (self.previousBlockState() is NoState and (ScriptIndex < 0 or CommentIndex < ScriptIndex)))):
             # Not sure why this is in a loop, it was in the example,
-            # and it works without the loop, however, I don't want to 
+            # and it works without the loop, however, I don't want to
             # remove it yet....
             while CommentIndex >= 0:
                 endMatch = self.commentEndExpression.match(text, CommentIndex)
@@ -104,18 +156,16 @@ class Highlighter(QSyntaxHighlighter):
                     commentLength = endIndex - CommentIndex + endMatch.capturedLength()
 
                 self.setFormat(CommentIndex, commentLength,
-                            self.multiLineCommentFormat)
+                               self.multiLineCommentFormat)
                 CommentIndex = self.commentStartExpression.match(
                     text, CommentIndex + commentLength).capturedStart()
-
-
 
         # If there is a previous script state that means we keep highlighting like a script
         # If there is no previous state, we check if there is no comment tag in the block
         # or if the script tag comes before the comment tag in the block,
-        # an highlight as a script 
-        elif(self.previousBlockState() is ScriptState or 
-        (self.previousBlockState() is NoState and (CommentIndex < 0 or ScriptIndex < CommentIndex))):
+        # an highlight as a script
+        elif(self.previousBlockState() is ScriptState or
+             (self.previousBlockState() is NoState and (CommentIndex < 0 or ScriptIndex < CommentIndex))):
             # Highlight JS
             while ScriptIndex >= 0:
                 endMatch = self.scriptEndExpression.match(text, ScriptIndex)
@@ -126,29 +176,39 @@ class Highlighter(QSyntaxHighlighter):
                     scriptLength = len(text) - ScriptIndex
                 else:
                     scriptLength = endIndex - ScriptIndex + endMatch.capturedLength()
-                
+
                 if(ScriptIndex >= 0):
                     ScriptIndex += self.scriptStartExpression.match(
                         text).capturedLength()
+
+                if endIndex == -1:
+                    self.setFormat(ScriptIndex, scriptLength, clearedFormat)
+                else:
+                    self.setFormat(ScriptIndex, endIndex - ScriptIndex, clearedFormat)
+
 
                 # Format the script tag according to the JS rules in __init__
                 for pattern, format in self.scriptHighlightingRules:
                     expression = QRegularExpression(pattern)
 
                     # Get the first match
-                    match: QRegularExpressionMatch = expression.match(text, ScriptIndex)
+                    match: QRegularExpressionMatch = expression.match(
+                        text, ScriptIndex)
                     while match.capturedStart() >= 0 and match.capturedLength() > 0:
                         # Format the current match, making sure to stay inside of script tags
                         if(endIndex == -1 or match.capturedStart() + match.capturedLength() <= endIndex):
-                            self.setFormat(match.capturedStart(), match.capturedLength(), format)
-                            match = expression.match(text, match.capturedStart() + match.capturedLength())
+                            self.setFormat(match.capturedStart(),
+                                           match.capturedLength(), format)
+                            match = expression.match(
+                                text, match.capturedStart() + match.capturedLength())
                         elif(match.capturedStart() < endIndex):
-                            self.setFormat(match.capturedStart(), endIndex - match.capturedStart(), format)
+                            self.setFormat(match.capturedStart(
+                            ), endIndex - match.capturedStart(), format)
                             match = expression.match(text, endIndex)
-                            break;
+                            break
                         else:
                             match = expression.match(text, endIndex)
-                            break;
+                            break
 
                 # self.setFormat(ScriptIndex, scriptLength,
                 #             self.multiLineCommentFormat)
@@ -157,13 +217,13 @@ class Highlighter(QSyntaxHighlighter):
 
             # endMatch = self.commentEndExpression.match(text, CommentIndex)
             # endIndex = endMatch.capturedStart()
-            # ofset = 0 
+            # ofset = 0
 
             # if(endIndex == -1):
             #     ofset = text.__len__()
             # else:
             #     ofset = expression.match(text.substr )
-                
+
             # for pattern, format in self.scriptHighlightingRules:
             #     expression = QRegularExpression(pattern)
 
