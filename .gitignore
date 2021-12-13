@@ -53,9 +53,7 @@ coverage.xml
 docs/_build/
 run.ps1
 meta.json
-.vscode/launch.json
-.vscode/tasks.json
-.vscode/settings.json
+.vscode/
 
 *.json
 !config.json
