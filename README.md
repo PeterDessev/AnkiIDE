@@ -6,7 +6,7 @@ AnkiIDE adds syntax highlighting to [Anki](https://apps.ankiweb.net/)'s template
 
 ## Installation
 
-To install the addon, extract the addon files into a new folder in Anki's `addon21` dirrectory, which can be accessed 
+To install the addon, extract the addon files into a new folder in Anki's `addons21` dirrectory, which can be accessed 
 by going to `Tools` | `Add-ons` | `View Files`
 
 ## Features
