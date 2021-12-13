@@ -1,6 +1,6 @@
 # AnkiIDE
 
-AnkiIDE adds syntax highlighting to [Anki](https://apps.ankiweb.net/)'s template editor for easier template creation and editing under the `Add` | `Cards...` window in Anki. AnkiIDE is based on [anki-template-editor](https://github.com/ericahn/anki-template-editor) with significant 
+AnkiIDE adds syntax highlighting to [Anki](https://apps.ankiweb.net/)'s template editor for easier template creation and editing under the `Add` | `Cards...` window in Anki. AnkiIDE is based on [anki-template-editor](https://github.com/ericahn/anki-template-editor) with significant changes both to functionality and user accesability
 
 ![Screenshot of editor](/docs/example.png)
 
