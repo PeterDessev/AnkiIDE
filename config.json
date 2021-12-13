@@ -1,28 +1,84 @@
 {
-    "user": {
-        "html": "default",
-        "css": "default"
+    "profile": {
+        "html": "monokai",
+        "javascript": "monokai",
+        "css": "monokai"
     },
     "html": {
-        "default": {
+        "monokai": {
             "editing": {
                 "tabs_to_spaces": true,
                 "tab_width": 4
             },
-            "style": {
-                "tag_color": "#008000",
-                "element_color": "#008000",
-                "element_style": "bold",
-                "attribute_color": "#7D9029",
-                "equals_color": "#7D9029",
-                "value_color": "#BA2121",
-                "moustache_color": "#BC7A00",
-                "moustache_style": "bold"
+            "format": {
+                "tag":{
+                    "color": "#F92672",
+                    "style": ""
+                },
+                "attribute":{
+                    "color": "#A6E22E",
+                    "style": ""
+                },
+                "keyword":{
+                    "color": "#E6D874",
+                    "style": ""
+                },
+                "comment":{
+                    "color": "#75715E",
+                    "style": ""
+                },
+                "ankiField":{
+                    "color": "#66D9EF",
+                    "style": ""
+                }
+            }
+        }
+    },
+    "javascript": {
+        "monokai": {
+            "editing": {
+                "tabs_to_spaces": true,
+                "tab_width": 4
+            },
+            "format": {
+                "functionName":{
+                    "color": "#A6E22E",
+                    "style": ""
+                },
+                "keyword":{
+                    "color": "#F92672",
+                    "style": ""
+                },
+                "operator":{
+                    "color": "#F92672",
+                    "style": ""
+                },
+                "declaration":{
+                    "color": "#66D9EF",
+                    "style": ""
+                },
+                "number":{
+                    "color": "#AE81FF",
+                    "style": ""
+                },
+                "this":{
+                    "color": "#FD971F",
+                    "style": ""
+                },
+                "string":{
+                    "color": "#E6D874",
+                    "style": ""
+                },
+                "comment":{
+                    "color": "#75715E",
+                    "style": ""
+                }
             }
         }
     },
     "css": {
-        "default": {
+        "asdf": {
+            "format":{},
             "editing": {
                 "tabs_to_spaces": true,
                 "tab_width": 4
