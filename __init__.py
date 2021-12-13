@@ -4,12 +4,18 @@ from aqt.clayout import CardLayout
 
 from .addon import highlighter
 from .addon import default_config
-import debugpy
 
-debugpy.listen(("localhost", 5678))
+import importlib.util as importUtil
+debugpySpec = importUtil.find_spec("debugpy")
+foundDebugpy = debugpySpec is not None
+
+if(foundDebugpy):
+    import debugpy
+    debugpy.listen(("localhost", 5678))
 
 def setUp(clayout: CardLayout) -> None:
-    debugpy.wait_for_client()
+    if(foundDebugpy):
+        debugpy.wait_for_client()
     mw.my_widgets = []
     editor = clayout.tform.edit_area
 
