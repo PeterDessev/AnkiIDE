@@ -60,3 +60,5 @@ meta.json
 *.ps1
 *.html
 *.js
+
+*.ignore
