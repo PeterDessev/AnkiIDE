@@ -12,7 +12,6 @@ DEFAULT_CONFIG = {
             },
             "format": {
                 "tag":{
-                    "color": "#F92672",
                     "style": ""
                 },
                 "attribute":{
@@ -65,12 +64,12 @@ DEFAULT_CONFIG = {
                     "color": "#FD971F",
                     "style": ""
                 },
-                "comment":{
-                    "color": "#75715E",
-                    "style": ""
-                },
                 "string":{
                     "color": "#E6D874",
+                    "style": ""
+                },
+                "comment":{
+                    "color": "#75715E",
                     "style": ""
                 }
             }
@@ -78,19 +77,15 @@ DEFAULT_CONFIG = {
     },
     "css": {
         "monokai": {
-            "format":{},
             "editing": {
                 "tabs_to_spaces": True,
                 "tab_width": 4
             },
-            "style": {
-                "brace_color": "#BB7977",
-                "selector_color": "#800000",
-                "selector_style": "bold",
-                "property_color": "#BB7977",
-                "property_style": "bold",
-                "equals_color": "gray",
-                "value_color": "#074726"
+            "format":{
+                "class": {
+                    "color": "#66D9EF",
+                    "style": ""
+                }
             }
         }
     }
