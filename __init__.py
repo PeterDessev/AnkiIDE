@@ -31,7 +31,7 @@ def setUp(clayout: CardLayout) -> None:
         print("Unable to lcoate config, using default config")
 
     
-    HTMLParse = parser.HTMLParser(config, editor.document())
+    HTMLParse = parser.IDE(config, editor.document())
     qconnect(editor.textChanged, HTMLParse.parseText)
 
     mw.IDEwidgets.append(HTMLParse)

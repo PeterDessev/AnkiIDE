@@ -27,7 +27,7 @@ def setStyle(fmt: QTextCharFormat, style: str) -> None:
     if "bold" in style:
         fmt.setFontWeight(QFont.Bold)
 
-class HTMLParser():
+class IDE():
     def __init__(self, config, document: QTextDocument) -> None:
         self.document = document
         self.config = config
@@ -222,7 +222,9 @@ class HTMLParser():
         return (self.returnState == tokenizationState.attributeValueDoubleQuotedState or
                 self.returnState == tokenizationState.attributeValueSingleQuotedState or
                 self.returnState == tokenizationState.attributeValueUnquotedState)
+    
 
+    # region HTML
     def parseDataState(self):
         if self.nextChar == "\u0026":  # Ampersand (&)
             self.returnState = tokenizationState.dataState
@@ -1478,7 +1480,7 @@ class HTMLParser():
         self.tempBuffer = chr(self.characterReferenceCode)
         self.flushCodePoints(self.tempBuffer, self.parseIndex)
         self.tokenState = self.returnState
-
+    # endregion
 
     def parseText(self) -> None:
         "Parses the text according to the W3 HTML standard, then "\
@@ -1506,7 +1508,10 @@ class HTMLParser():
         self.parseIndex = 0
         while self.parseIndex < self.raw.__len__():
             self.nextChar = self.raw[self.parseIndex]
-            print(self.tokenState.name + ": " + self.nextChar)
+            if(self.nextChar == "\n"):
+                print(self.tokenState.name + ": \\n")
+            else:
+                print(self.tokenState.name + ": |" + self.nextChar + "|")
             {
                 tokenizationState.dataState: self.parseDataState,
                 tokenizationState.RCDataState: self.parseRCDataState,
