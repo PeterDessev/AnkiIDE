@@ -1,8 +1,10 @@
 from enum import Enum, auto
+from typing import List
 
 class istr:
-    text:str = None
-    index:int = -1
+    def __init__(self) -> None:
+        self.text:str = None
+        self.index:int = -1
     
     def __len__(self) -> bool:
         return self.text.__len__()
@@ -105,8 +107,9 @@ class tokenizationState(Enum):
     numericCharacterReferenceEndState = auto()
 
 class attribute():
-    name:istr = None
-    value:istr = None
+    def __init__(self) -> None:
+        self.name:istr = None
+        self.value:istr = None
 
     def __eq__(self, __o: object) -> bool:
         if(isinstance(__o, attribute)):
@@ -114,21 +117,23 @@ class attribute():
         return False
 
 class doctypeToken():
-    tagOpen:int = None
-    name:istr = None
-    publicID:istr = None
-    systemID:istr = None
-    forceQuirks:bool = False
-    tagClose:int = None
+    def __init__(self) -> None:
+        self.tagOpen:int = None
+        self.name:istr = None
+        self.publicID:istr = None
+        self.systemID:istr = None
+        self.forceQuirks:bool = False
+        self.tagClose:int = None
 
 class tagToken():
-    tagOpen:int = None
-    tagName:istr = None
-    selfClosing:bool = False
-    attributes:list[attribute] = list()
-    currentAttribute:attribute = None
-    tagClose:int = None
-    # canPushCurrentAttribute:bool = None
+    def __init__(self) -> None:
+        self.tagOpen:int = None
+        self.tagName:istr = None
+        self.selfClosing:bool = False
+        self.attributes:List[attribute] = []
+        self.currentAttribute:attribute = None
+        self.tagClose:int = None
+        # canPushCurrentAttribute:bool = None
 
     def __str__(self) -> str:
         ret:str = ""
@@ -174,10 +179,12 @@ class endTagToken(tagToken):
     None
 
 class characterToken():
-    char:istr = None
+    def __init__(self) -> None:
+        self.char:istr = None
 
 class commentToken():
-    data:istr = None
+    def __init__(self) -> None:
+        self.data:istr = None
 
     def append(self, content:str) -> None:
         self.data.text += content

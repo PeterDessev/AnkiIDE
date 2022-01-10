@@ -214,8 +214,8 @@ class IDE():
 
     def pushAttribute(self, token: tagToken):
         if not token.pushCurrentAttribute():
-            beginIndex: int = tagToken.currentAttribute.name.index
-            errorLen: int = tagToken.currentAttribute.name.text.__len__()
+            beginIndex: int = token.currentAttribute.name.index
+            errorLen: int = token.currentAttribute.name.text.__len__()
             self.throwError(parseError.duplicateAttribute, beginIndex, errorLen)
 
     def consumedAsPartOfAttribute(self) -> bool:
@@ -756,10 +756,10 @@ class IDE():
             self.pushAttribute(self.token)
         elif isASCIIUpperAlpha(self.nextChar):
             self.token: tagToken = self.token
-            tagToken.currentAttribute.name.append(self.nextChar.lower())
+            self.token.currentAttribute.name.append(self.nextChar.lower())
         elif self.nextChar == "\u0000":  # Null
             self.throwError(parseError.unexpectedNullCharacter, self.parseIndex, 1)
-            tagToken.currentAttribute.name.text += "\uFFFD"  # Replacement character
+            self.token.currentAttribute.name.text += "\uFFFD"  # Replacement character
         elif self.nextChar in ["\u0022", "\u0027", "\u003C"]:  # Quotation mark ("), Apostrophe ('), Less than sign (<)
             self.throwError(parseError.unexpectedCharacterInAttributeName, self.parseIndex, 1)
             self.token: tagToken = self.token
@@ -1511,7 +1511,7 @@ class IDE():
             if(self.nextChar == "\n"):
                 print(self.tokenState.name + ": \\n")
             else:
-                print(self.tokenState.name + ": |" + self.nextChar + "|")
+                print( "|" + self.nextChar + "|: " + self.tokenState.name)
             {
                 tokenizationState.dataState: self.parseDataState,
                 tokenizationState.RCDataState: self.parseRCDataState,
