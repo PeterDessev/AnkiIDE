@@ -69,9 +69,9 @@ class IDE():
         # self.originalInsertionMode = self.insertionModes.noMode
         # self.currentTemplateInsertionMode = self.insertionModes.noMode
 
-        # self.openElementsStack = []
-        # self.templateInsertionModesStack = []
-        # self.activeFormattingElements = []
+        self.openElementsStack = []
+        self.templateInsertionModesStack = []
+        self.activeFormattingElements = []
 
         # self.headElementPointer = None
         # self.formElementPointer = None
@@ -184,7 +184,15 @@ class IDE():
     def throwError(self, error: parseError, index: int, len: int) -> None:
         print("Encountered error %s at index %d with length %d" % (error.name, index, len))
 
+    def resetInsertionMode(self) -> None:
+        last = False
+        node = self.openElementsStack[-1]
+        
+
     # TODO: Implement token emision
+    # region Tree Construction
+
+
     def emitToken(self, token) -> None:
         if isinstance(token, startTagToken):
             self.lastEmitedStartTagToken = token
@@ -199,6 +207,7 @@ class IDE():
         #     print("Emitted comment token %s" % (token.data))
         # else:
         #     print("Emitting token")
+    # endregion
 
     def emitCharacter(self, char: str, index: int):
         token: characterToken = characterToken()
