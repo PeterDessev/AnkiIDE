@@ -106,6 +106,31 @@ class tokenizationState(Enum):
     decCharacterReferenceState = auto()
     numericCharacterReferenceEndState = auto()
 
+class insertionModes(Enum):
+    initial: auto()
+    beforeHtml: auto()
+    beforeHead: auto()
+    inHead: auto()
+    inHeadNoscript: auto()
+    afterHead: auto()
+    inBody: auto()
+    text: auto()
+    inTable: auto()
+    inTableText: auto()
+    inCaption: auto()
+    inColumnGroup: auto()
+    inTableBody: auto()
+    inRow: auto()
+    inCell: auto()
+    inSelect: auto()
+    inSelectInTable: auto()
+    inTemplate: auto()
+    afterBody: auto()
+    inFrameset: auto()
+    afterFrameset: auto()
+    afterAfterBody: auto()
+    afterAfterFrameset: auto()
+
 class attribute():
     def __init__(self) -> None:
         self.name:istr = None
