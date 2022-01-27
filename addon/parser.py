@@ -1,3 +1,6 @@
+from cgitb import text
+from operator import truediv
+from socket import NI_NAMEREQD
 from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor, QTextDocument, QFont
 
 from .tokens import *
@@ -46,14 +49,9 @@ class IDE():
         self.tokenState: tokenizationState = tokenizationState.dataState
         self.returnState = None
 
-        self.scriptNestingLevel = 0
-        self.parserPauseFlag = 0
-
         self.lastEmitedStartTagToken: startTagToken = None
 
-        self.raw: str = ""
         self.parseIndex = 0
-        # self.curChar = None
         self.nextChar = None
         self.insertionPoint = None
         self.reconsume = False
@@ -61,27 +59,21 @@ class IDE():
         self.tempBuffer = None
         self.characterReferenceCode = None
 
-        self.fosterParenting = False
-
-        # self.scopeStack = []
-        # self.tokenTree = []
-
-        # region HTML Parsing
-        self.insertionMode = insertionModes.initial
+        self.lineCount = 0
+        self.lineIndex = 0
+        
         self.originalInsertionMode = None
         self.reprocessToken = False
-        # self.originalInsertionMode = self.insertionModes.noMode
-        # self.currentTemplateInsertionMode = self.insertionModes.noMode
-
+        
         self.openElementsStack = []
         self.templateInsertionModesStack = []
         self.activeFormattingElements = []
         self.headElement = None
         self.formElement = None
-        # self.headElementPointer = None
-        # self.formElementPointer = None
-        # endregion
+        self.characterTokenBuffer = []
 
+        self.inScript = False
+        self.curScriptContents = ""
         # region Config Initialization
         try:
             self.htmlStyles = config["html"][config["profile"]
@@ -109,7 +101,6 @@ class IDE():
             self.cssStyles = defConfig["css"][config["profile"]
                                               ["css"]]["format"]
         # endregion
-
         self.initializeFormats()
 
     def initializeFormats(self) -> None:
@@ -185,82 +176,50 @@ class IDE():
             return False
         return token.tagName == self.lastEmitedStartTagToken.tagName
 
+    def flushCharacterTokenBuffer(self) -> None:
+        if self.characterTokenBuffer.__len__() > 0:
+            for characterTokenInst in self.characterTokenBuffer: 
+                print(characterTokenInst, end = "")
+            print()
+
     # TODO: Implement error Handling
     def throwError(self, error: parseError, index: int, len: int) -> None:
-        print("Encountered error %s at index %d with length %d" % (error.name, index, len))
+        print("Encountered error %s in line %d, character %d with length %d" % (error.name, self.lineCount + 1, self.lineIndex + 1, len))          
 
-    def resetInsertionMode(self) -> None:
-        last = False
-        node = self.openElementsStack[-1]
-        
-        for i in range(0, self.openElementsStack.__len__()):
-            if i == 0:
-                last = True
+    # TODO: Implement Script Parsing and Highlighting
+    def parseScript(self):
+        self.curScriptContents = ""
 
-            token = self.openElementsStack[i]
-            if isinstance(tagToken, token) and token.tagName is "select":
-                ...
-
-    # def insertNode(self, node, override = None) -> None:
-    #     target = node
-    #     if(override is not None):
-    #         target = override
-        
-    #     if self.fosterParenting is True and isinstance(target, tagToken):
-    #         if target.tagName in ["tbody", "table", "tfoot", "thead", "tr"]:
-    #             lastTemplate = [None, -1]
-    #             lastTable = [None, -1]
-
-    #             for i in range(0, self.openElementsStack.__len__()):
-    #                 if isinstance(i, tagToken) and i.tagName is "template":
-    #                     lastTemplate = [self.openElementsStack[i], i]
-    #                 elif isinstance(i, tagToken) and i.tagName is "table":
-    #                     lastTable = [self.openElementsStack[i], i];
-                    
-    #             # if lastTemplate[1] >= 0 and lastTable[1] < lastTable[1]:
-                     
-
-    # TODO: Implement token emision
     # region Token Parsing
-    def parseGenRawText(self, token) -> None:
-        self.tokenState = tokenizationState.rawTextState
-        self.originalInsertionMode = self.insertionMode
-        self.insertionMode = insertionModes.text
-
-    def parseGenRCDATA(self, token) -> None:
-        self.tokenState = tokenizationState.RCDataState
-        self.originalInsertionMode = self.insertionMode
-        self.insertionMode = insertionModes.text
-
-
     def emitToken(self, token) -> None:
+        if not isinstance(token, characterToken):
+            self.flushCharacterTokenBuffer()
+            print(token)
+            self.characterTokenBuffer = []
+        else:
+            if self.inScript:
+                self.curScriptContents += token.char
+            self.characterTokenBuffer.append(token.char)
+
         if isinstance(token, startTagToken):
             self.lastEmitedStartTagToken = token
-        
-        # if isinstance(token, startTagToken):
-        #     print("Emitted start tag token with name %s" % (token.tagName))
-        # elif isinstance(token, endTagToken):
-        #     print("Emitted end tag token with name %s" % (token.tagName))
-        # elif isinstance(token, characterToken):
-        #     print("Emitted character token %s" % (token.char))
-        # elif isinstance(token, commentToken):
-        #     print("Emitted comment token %s" % (token.data))
-        # else:
-        #     print("Emitting token")
 
-        while True:
-            self.reprocessToken = False
-            {
-                insertionModes.initial: self.initialIM,
-                insertionModes.beforeHtml: self.beforeHtmlIM,
-                insertionModes.beforeHead: self.beforeHeadIM,
+            if token.tagName == "script":
+                self.inScript = True
+                self.tokenState = tokenizationState.scriptDataState
+            else:
+                self.inScript = False
+
+            if token.tagName == "plaintext":
+                self.tokenState = tokenizationState.plainTextState
+            elif token.tagName in ["textarea", "title"]:
+                self.tokenState = tokenizationState.RCDataState
+            elif token.tagName in ["noframes", "style", "noscript", "xmp"]:
+                self.tokenState = tokenizationState.rawTextState
+        elif isinstance(token, endTagToken):
+            if token.tagName == "script":
+                self.parseScript()
                 
-            }[self.insertionMode](self, token)
-
-            if not self.reprocessToken:
-                break
-
-        
         return
 
     def emitCharacter(self, char: str, index: int):
@@ -282,6 +241,10 @@ class IDE():
         return (self.returnState == tokenizationState.attributeValueDoubleQuotedState or
                 self.returnState == tokenizationState.attributeValueSingleQuotedState or
                 self.returnState == tokenizationState.attributeValueUnquotedState)
+
+    def genImpliedETsThouroughly(self) -> None:
+        while self.openElementsStack[-1] in ["caption", "colgroup", "dd", "dt", "li", "optgroup", "option", "p", "rb", "rp", "rt", "rtc", "tbody", "td", "tfoot", "th", "thead", "tr"]:
+            self.openElementsStack.pop()
 
     class tokenizer():
         def parseDataState(self):
@@ -377,8 +340,8 @@ class IDE():
             elif self.nextChar == "\u002F":  # Solidus (/)
                 self.tokenState = tokenizationState.selfClosingStartTagState
             elif self.nextChar == "\u003E":  # Greater than sign (>)
-                self.emitToken(self.token)
                 self.tokenState = tokenizationState.dataState
+                self.emitToken(self.token)
             elif isASCIIUpperAlpha(self.nextChar):
                 self.token.tagName.append(self.nextChar.lower())
             elif self.nextChar == "\u0000":  # Null
@@ -1448,7 +1411,7 @@ class IDE():
 
         def parseAmbiguousAmpersandState(self):
             if isASCIIAlphaNumeric(self.nextChar):
-                if self.consumedAsPartOfAttribute(self):
+                if self.consumedAsPartOfAttribute():
                     self.token:tagToken = self.token
                     self.token.currentAttribute.value.append(self.nextChar)
                 else:
@@ -1539,75 +1502,6 @@ class IDE():
             self.tempBuffer = chr(self.characterReferenceCode)
             self.flushCodePoints(self.tempBuffer, self.parseIndex)
             self.tokenState = self.returnState
-    
-    class treeConstructor():
-        None
-
-    def initialIM(self, token):
-        if isinstance(token, characterToken):
-            if token.char in ["\u0009", "\u000A", "\u000C", "\u000D", "\u0020"]:
-                None
-        elif isinstance(token, commentToken):
-            self.highlighter.highlightComment(token)
-        elif isinstance(token, doctypeToken):
-            self.insertionMode = insertionModes.beforeHtml
-        else:
-            self.insertionMode = insertionModes.beforeHtml
-            self.processToken(token)
-
-        self.insertionMode
-
-    def beforeHtmlIM(self, token):
-        if isinstance(token, doctypeToken):
-            None
-        elif isinstance(token, commentToken):
-            self.highlighter.highlightComment(token)
-        elif isinstance(token, characterToken) and token.char in ["\u0009", "\u000A", "\u000C", "\u000D", "\u0020"]:
-            None
-        elif isinstance(token, startTagToken) and token.tagName == "html":
-            self.highlighter.highlightTag(token)
-            self.insertionMode = insertionModes.beforeHead
-        elif isinstance(token, endTagToken) and token.tagName not in ["head", "body", "html", "br"]:
-            None
-        else:
-            self.insertionMode = insertionModes.inHead
-            self.reprocessToken = True
-
-    def beforeHeadIM(self, token):
-        if isinstance(token, characterToken) and token.char in ["\u0009", "\u000A", "\u000C", "\u000D", "\u0020"]:
-            None
-        elif isinstance(token, commentToken):
-            self.highlighter.highlightComment(token)
-        elif isinstance(token, doctypeToken):
-            self.highlighter.highlightDoctype(token)
-        elif isinstance(token, startTagToken):
-            self.highlighter.highlightTag(token)
-            if token.tagName != "html":
-                self.insertionMode = insertionModes.inHead
-            if token.tagName != "head":
-                self.reprocessToken = True
-        elif isinstance(token, endTagToken):
-            self.highlighter.highlightTag(token)
-            if token.tagName in ["head", "body","html", "br"]:
-                self.insertionMode = insertionModes.inHead
-                self.reprocessToken = True
-        else:
-            self.insertionMode = insertionModes.inHead
-            self.reprocessToken = True 
-    
-    def inHeadIM(self, token):
-        if isinstance(token, characterToken) and token.char in ["\u0009", "\u000A", "\u000C", "\u000D", "\u0020"]:
-            None
-        elif isinstance(token, commentToken):
-            self.highlighter.highlightComment(token)
-        elif isinstance(token, doctypeToken):
-            self.highlighter.highlightDoctype(token)
-        elif isinstance(token, startTagToken):
-            if token.tagName == "html":
-                None
-            elif token.tagName in ["base", "basefont", "bgsound", "link"]:
-                
-
 
     class highlighter():
         def highlightComment(token:commentToken):
@@ -1631,16 +1525,44 @@ class IDE():
         if(self.isParsing == 1):
             return
 
-        self.isParsing = 1
-        self.raw: str = self.cleanText()
-        self.parseIndex = 0
+        self.tokenState: tokenizationState = tokenizationState.dataState
+        self.returnState = None
 
+        self.lastEmitedStartTagToken: startTagToken = None
+
+        self.parseIndex = 0
+        self.nextChar = None
+        self.insertionPoint = None
+        self.reconsume = False
+        self.token = None
+        self.tempBuffer = None
+        self.characterReferenceCode = None
+
+        self.lineCount = 0
+        self.lineIndex = 0
+
+        self.originalInsertionMode = None
+        self.reprocessToken = False
+        self.openElementsStack = []
+        self.templateInsertionModesStack = []
+        self.activeFormattingElements = []
+        self.headElement = None
+        self.formElement = None
+        self.characterTokenBuffer = []
+        self.curScriptContents = ""
+
+        self.raw: str = self.cleanText()
+
+        print("\n\n----- NEW DOCUMENT -----\n\n")
+        
         while self.parseIndex < self.raw.__len__():
             self.nextChar = self.raw[self.parseIndex]
-            if(self.nextChar == "\n"):
-                print(self.tokenState.name + ": \\n")
+            if self.nextChar == "\n":
+                self.lineCount += 1
+                self.lineIndex = 0
             else:
-                print( "|" + self.nextChar + "|: " + self.tokenState.name)
+                self.lineIndex += 1
+
             {
                 tokenizationState.dataState: self.tokenizer.parseDataState,
                 tokenizationState.RCDataState: self.tokenizer.parseRCDataState,
@@ -1724,17 +1646,17 @@ class IDE():
                 tokenizationState.numericCharacterReferenceEndState: self.tokenizer.parseNumericCharacterReferenceEndState
             }[self.tokenState](self)
 
-
             if(not self.reconsume):
                 # curChar = self.nextChar
                 self.parseIndex += 1
             else:
                 self.reconsume = False
 
+        self.flushCharacterTokenBuffer()
+        
         cursor = QTextCursor(self.document)
         cursor.setPosition(1, QTextCursor.MoveMode(0))
         cursor.setPosition(2, QTextCursor.MoveMode(1))
-        # cursor.setCharFormat(fmt)
 
         # Enable parsing on edits
         self.isParsing = 0

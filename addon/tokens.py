@@ -12,6 +12,8 @@ class istr:
     def __eq__(self, __o: object) -> bool:
         if(isinstance(__o, istr)):
             return self.text == __o.text
+        elif(isinstance(__o, str)):
+            return self.text == __o
         return False
 
     def __init__(self, text:str, index:int) -> None:
@@ -23,6 +25,12 @@ class istr:
 
     def append(self, content:str) -> None:
         self.text += content
+ 
+    def __add__(self, other:str) -> str:
+        return str(self) + other
+    
+    def __radd__(self, other:str) -> str:
+        return other + str(self)
 
 class tokenizationState(Enum):
     dataState = auto()
@@ -150,6 +158,13 @@ class doctypeToken():
         self.forceQuirks:bool = False
         self.tagClose:int = None
 
+    def __str__(self) -> str:
+        ret = "Doctype Token\n"
+        ret += "    " + self.name + "\n"
+        ret += "    " + self.publicID + "\n"
+        ret += "    " + self.systemID
+        return ret
+
 class tagToken():
     def __init__(self) -> None:
         self.tagOpen:int = None
@@ -166,14 +181,15 @@ class tagToken():
         for attr in self.attributes:
             ret += " " + attr.name.text + " = " + attr.value.text
         ret += ">"
+    
         return ret
-
     # def checkCurrentAttribute(self) -> bool:
-    #     if self.currentAttribute.name in self.attributes:
-    #         self.canPushCurrentAttribute = False
-    #     else:
-    #         self.canPushCurrentAttribute = True
-    #     return self.canPushCurrentAttribute
+        #     if self.currentAttribute.name in self.attributes:
+        #         self.canPushCurrentAttribute = False
+        #     else:
+        #         self.canPushCurrentAttribute = True
+        #     return self.canPushCurrentAttribute
+
 
     def newAttribute(self, name:istr, value:istr):
         self.currentAttribute = attribute()
@@ -186,9 +202,7 @@ class tagToken():
                 return False
 
         self.attributes.append(self.currentAttribute)
-        return True
-
-
+        
         # if self.canPushCurrentAttribute is None:
         #     print("AnkiIDE ERROR: CanPushCertain attribute is none for tag %s" % (self.__str__()))
         #     return False
@@ -196,20 +210,37 @@ class tagToken():
         # if self.canPushCurrentAttribute is False:
         #     return False
         # self.canPushCurrentAttribute = None
+        return True
 
 class startTagToken(tagToken):
-    None
+    def __str__(self) -> str:
+        ret = "<" + self.tagName + ">\n"
+        for attribute in self.attributes:
+            ret += "    \"" + attribute.name + "\": \"" + attribute.value + "\"\n"
+        return ret[:-1]
 
 class endTagToken(tagToken):
-    None
+    def __str__(self) -> str:
+        ret = "</" + self.tagName + ">\n"
+        for attribute in self.attributes:
+            ret += "    \"" + attribute.name + "\": \"" + attribute.value + "\"\n"
+        return ret[:-1]
+
 
 class characterToken():
     def __init__(self) -> None:
         self.char:istr = None
 
+    def __str__(self) -> str:
+        return str(self.char)
+    
 class commentToken():
     def __init__(self) -> None:
         self.data:istr = None
 
     def append(self, content:str) -> None:
         self.data.text += content
+    
+    def __str__(self) -> str:
+        ret = "<!--" + self.data + "--!>"
+        return ret
