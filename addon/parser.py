@@ -43,34 +43,7 @@ class IDE():
 
         self.isParsing = 0
 
-        self.tokenState: tokenizationState = tokenizationState.dataState
-        self.returnState = None
-
-        self.lastEmitedStartTagToken: startTagToken = None
-
-        self.parseIndex = 0
-        self.nextChar = None
-        self.insertionPoint = None
-        self.reconsume = False
-        self.token = None
-        self.tempBuffer = None
-        self.characterReferenceCode = None
-
-        self.lineCount = 0
-        self.lineIndex = 0
-        
-        self.originalInsertionMode = None
-        self.reprocessToken = False
-        
-        self.openElementsStack = []
-        self.templateInsertionModesStack = []
-        self.activeFormattingElements = []
-        self.headElement = None
-        self.formElement = None
-        self.characterTokenBuffer = []
-
-        self.inScript = False
-        self.curScriptContents = ""
+        self.reset()
 
         # region Config Initialization
         try:
@@ -101,6 +74,36 @@ class IDE():
         # endregion
         
         self.initializeFormats()
+
+    def reset(self):
+        self.tokenState: tokenizationState = tokenizationState.dataState
+        self.returnState = None
+
+        self.lastEmitedStartTagToken: startTagToken = None
+
+        self.parseIndex = 0
+        self.nextChar = None
+        self.insertionPoint = None
+        self.reconsume = False
+        self.token = None
+        self.tempBuffer = None
+        self.characterReferenceCode = None
+
+        self.lineCount = 0
+        self.lineIndex = 0
+
+        self.originalInsertionMode = None
+        self.reprocessToken = False
+        self.openElementsStack = []
+        self.templateInsertionModesStack = []
+        self.activeFormattingElements = []
+        self.headElement = None
+        self.formElement = None
+        self.characterTokenBuffer = []
+        self.curScriptContents = ""
+
+        self.raw: str = self.cleanText()
+        self.inScript = False
 
     def initializeFormats(self) -> None:
         "Initialize all formats in the config into QTextCharFormat objects"
@@ -158,7 +161,6 @@ class IDE():
 
             self.jsFormats[formatName] = fmt
         
-
     def cleanText(self) -> str:
         # Normalize New Lines
         plaintext = self.document.toPlainText()
@@ -201,6 +203,7 @@ class IDE():
             self.characterTokenBuffer.append(token.char)
 
         if isinstance(token, startTagToken):
+            self.highlighter.highlightTag(token)
             self.lastEmitedStartTagToken = token
 
             if token.tagName == "script":
@@ -215,9 +218,17 @@ class IDE():
                 self.tokenState = tokenizationState.RCDataState
             elif token.tagName in ["noframes", "style", "noscript", "xmp"]:
                 self.tokenState = tokenizationState.rawTextState
+
         elif isinstance(token, endTagToken):
+            self.highlighter.highlightTag(token)
             if token.tagName == "script":
                 self.parseScript()
+
+        elif isinstance(token, commentToken):
+            self.highlighter.highlightComment(token)
+
+        elif isinstance(doctypeToken):
+            self.highlighter.highlightDoctype(token)
                 
         return
 
@@ -1520,33 +1531,7 @@ class IDE():
         if(self.isParsing == 1):
             return
 
-        self.tokenState: tokenizationState = tokenizationState.dataState
-        self.returnState = None
-
-        self.lastEmitedStartTagToken: startTagToken = None
-
-        self.parseIndex = 0
-        self.nextChar = None
-        self.insertionPoint = None
-        self.reconsume = False
-        self.token = None
-        self.tempBuffer = None
-        self.characterReferenceCode = None
-
-        self.lineCount = 0
-        self.lineIndex = 0
-
-        self.originalInsertionMode = None
-        self.reprocessToken = False
-        self.openElementsStack = []
-        self.templateInsertionModesStack = []
-        self.activeFormattingElements = []
-        self.headElement = None
-        self.formElement = None
-        self.characterTokenBuffer = []
-        self.curScriptContents = ""
-
-        self.raw: str = self.cleanText()
+        self.reset()
 
         print("\n\n----- NEW DOCUMENT -----\n\n")
         
