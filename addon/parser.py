@@ -1,6 +1,3 @@
-from cgitb import text
-from operator import truediv
-from socket import NI_NAMEREQD
 from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor, QTextDocument, QFont
 
 from .tokens import *
@@ -74,6 +71,7 @@ class IDE():
 
         self.inScript = False
         self.curScriptContents = ""
+
         # region Config Initialization
         try:
             self.htmlStyles = config["html"][config["profile"]
@@ -101,6 +99,7 @@ class IDE():
             self.cssStyles = defConfig["css"][config["profile"]
                                               ["css"]]["format"]
         # endregion
+        
         self.initializeFormats()
 
     def initializeFormats(self) -> None:
@@ -158,7 +157,7 @@ class IDE():
                       % (self.config["profile"]["css"], formatName))
 
             self.jsFormats[formatName] = fmt
-        # endregion
+        
 
     def cleanText(self) -> str:
         # Normalize New Lines
@@ -241,10 +240,6 @@ class IDE():
         return (self.returnState == tokenizationState.attributeValueDoubleQuotedState or
                 self.returnState == tokenizationState.attributeValueSingleQuotedState or
                 self.returnState == tokenizationState.attributeValueUnquotedState)
-
-    def genImpliedETsThouroughly(self) -> None:
-        while self.openElementsStack[-1] in ["caption", "colgroup", "dd", "dt", "li", "optgroup", "option", "p", "rb", "rp", "rt", "rtc", "tbody", "td", "tfoot", "th", "thead", "tr"]:
-            self.openElementsStack.pop()
 
     class tokenizer():
         def parseDataState(self):
