@@ -203,7 +203,7 @@ class IDE():
             self.characterTokenBuffer.append(token.char)
 
         if isinstance(token, startTagToken):
-            self.highlighter.highlightTag(token)
+            self.highlightTag(token)
             self.lastEmitedStartTagToken = token
 
             if token.tagName == "script":
@@ -220,15 +220,15 @@ class IDE():
                 self.tokenState = tokenizationState.rawTextState
 
         elif isinstance(token, endTagToken):
-            self.highlighter.highlightTag(token)
+            self.highlightTag(token)
             if token.tagName == "script":
                 self.parseScript()
 
         elif isinstance(token, commentToken):
-            self.highlighter.highlightComment(token)
+            self.highlightComment(token)
 
-        elif isinstance(doctypeToken):
-            self.highlighter.highlightDoctype(token)
+        elif isinstance(token, doctypeToken):
+            self.highlightDoctype(token)
                 
         return
 
@@ -1509,15 +1509,16 @@ class IDE():
             self.flushCodePoints(self.tempBuffer, self.parseIndex)
             self.tokenState = self.returnState
 
-    class highlighter():
-        def highlightComment(token:commentToken):
-            ...
+    def highlightComment(self, token:commentToken):
+        cursor = QTextCursor(self.document)
+        cursor.setPosition(1, QTextCursor.MoveMode(0))
+        cursor.setPosition(2, QTextCursor.MoveMode(1))
 
-        def highlightDoctype(token:doctypeToken):
-            ...
+    def highlightDoctype(self, token:doctypeToken):
+        ...
 
-        def highlightTag(token:tagToken):
-            ...
+    def highlightTag(self, token:tagToken):
+        ...
 
     def parseText(self) -> None:
         "Parses the text according to the W3 HTML standard, then "\
@@ -1633,10 +1634,5 @@ class IDE():
                 self.reconsume = False
 
         self.flushCharacterTokenBuffer()
-        
-        cursor = QTextCursor(self.document)
-        cursor.setPosition(1, QTextCursor.MoveMode(0))
-        cursor.setPosition(2, QTextCursor.MoveMode(1))
-
         # Enable parsing on edits
         self.isParsing = 0
