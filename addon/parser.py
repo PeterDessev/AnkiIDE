@@ -75,7 +75,7 @@ class IDE():
         
         self.initializeFormats()
 
-    def reset(self):
+    def reset(self):       
         self.tokenState: tokenizationState = tokenizationState.dataState
         self.returnState = None
 
@@ -159,7 +159,7 @@ class IDE():
                 print("AnkiIDE Warning: Config profile \"%s\" is missing style attribute for \"%s\" format in css"
                       % (self.config["profile"]["css"], formatName))
 
-            self.jsFormats[formatName] = fmt
+            self.cssFormats[formatName] = fmt
         
     def cleanText(self) -> str:
         # Normalize New Lines
@@ -193,14 +193,14 @@ class IDE():
 
     # region Token Parsing
     def emitToken(self, token) -> None:
-        if not isinstance(token, characterToken):
-            self.flushCharacterTokenBuffer()
-            print(token)
-            self.characterTokenBuffer = []
-        else:
-            if self.inScript:
-                self.curScriptContents += token.char
-            self.characterTokenBuffer.append(token.char)
+        # if not isinstance(token, characterToken):
+        #     self.flushCharacterTokenBuffer()
+        #     print(token)
+        #     self.characterTokenBuffer = []
+        # else:
+        #     if self.inScript:
+        #         self.curScriptContents += token.char
+        #     self.characterTokenBuffer.append(token.char)
 
         if isinstance(token, startTagToken):
             self.highlightTag(token)
@@ -315,6 +315,7 @@ class IDE():
             elif self.nextChar == "\u003F":  # Question mark (?)
                 self.throwError(parseError.unexpectedQuestionMarkInsteadOfTagName, self.parseIndex, 1)
                 self.token: commentToken = commentToken()
+                self.token.startIndex = self.parseIndex - 2
                 self.token.data = istr("", self.parseIndex)
                 self.reconsume = True
                 self.tokenState = tokenizationState.bogusCommentState
@@ -336,6 +337,7 @@ class IDE():
             else:
                 self.throwError(parseError.invalidFirstCharacterofTagName, self.parseIndex, 1)
                 self.token: commentToken = commentToken()
+                self.token.startIndex = self.parseIndex - 1
                 self.token.data = istr("", self.parseIndex)
                 self.reconsume = True
                 self.tokenState = tokenizationState.bogusCommentState
@@ -904,6 +906,8 @@ class IDE():
         def parseBogusCommentState(self):
             if self.nextChar == "\u003E": # Greater than sign (>)
                 self.tokenState = tokenizationState.dataState
+                self.token:commentToken = self.token
+                self.token.endIndex = self.parseIndex + 1
                 self.emitToken(self.token)
             elif self.nextChar == "\u0000": # Null
                 self.throwError(parseError.unexpectedNullCharacter, self.parseIndex, 1)
@@ -917,6 +921,7 @@ class IDE():
             if self.raw[self.parseIndex: self.parseIndex + 2] == "\u002D\u002D":  # Two hyphen minus characters (--)
                 self.parseIndex += 1
                 self.token: commentToken = commentToken()
+                self.token.startIndex = self.parseIndex - 3
                 self.token.data = istr("", self.parseIndex + 1)
                 self.tokenState = tokenizationState.commentStartState   
             elif self.raw[self.parseIndex: self.parseIndex + 7] == "DOCTYPE":
@@ -926,6 +931,7 @@ class IDE():
             elif self.raw[self.parseIndex: self.parseIndex + 7] == "\u005BCDATA\u005B":
                 self.throwError(parseError.cdataInHTMLdata, self.parseIndex, 1)
                 self.token: commentToken = commentToken()
+                self.token.startIndex = self.parseIndex - 3
                 self.token.data = istr(self.raw[self.parseIndex: self.parseIndex + 7], self.parseIndex)
                 self.parseIndex += 6
             else:
@@ -939,6 +945,7 @@ class IDE():
             elif self.nextChar == "\u003E":  # Greater than sign (>)
                 self.throwError(parseError.abruptClosingOfEmptyComment, self.parseIndex, 1)
                 self.tokenState = tokenizationState.dataState
+                self.token.endIndex = self.parseIndex + 1
                 self.emitToken(self.token)
             else:
                 self.tokenState = tokenizationState.commentState
@@ -950,6 +957,7 @@ class IDE():
             elif self.nextChar == "\u003E":  # Greater than sign (>)
                 self.throwError(parseError.abruptClosingOfEmptyComment, self.parseIndex, 1)
                 self.tokenState = tokenizationState.dataState
+                self.token.endIndex = self.parseIndex + 1
                 self.emitToken(self.token)
             else:
                 self.token: commentToken = self.token
@@ -1019,6 +1027,7 @@ class IDE():
         def parseCommentEndState(self):
             if self.nextChar == "\u003E":  # Greater than sign (>)
                 self.tokenState = tokenizationState.dataState
+                self.token.endIndex = self.parseIndex + 1
                 self.emitToken(self.token)
             elif self.nextChar == "\u0021":  # Exclamation mark (!)
                 self.tokenState = tokenizationState.commentEndBangState
@@ -1042,6 +1051,7 @@ class IDE():
             elif self.nextChar == "\u003E":  # Greater than sign (>)
                 self.throwError(parseError.incorrectlyClosedComment, self.parseIndex, 1)
                 self.tokenState = tokenizationState.dataState
+                self.token.endIndex = self.parseIndex + 1
                 self.emitToken(self.token)
             else:
                 self.token.append("\u002D")  # Hyphen minus (-)
@@ -1510,9 +1520,11 @@ class IDE():
             self.tokenState = self.returnState
 
     def highlightComment(self, token:commentToken):
-        cursor = QTextCursor(self.document)
-        cursor.setPosition(1, QTextCursor.MoveMode(0))
-        cursor.setPosition(2, QTextCursor.MoveMode(1))
+        cursor:QTextCursor = QTextCursor(self.document)
+        cursor.setPosition(token.startIndex, QTextCursor.MoveMode(0))
+        
+        cursor.setPosition(token.endIndex, QTextCursor.MoveMode(1))
+        cursor.setCharFormat(self.htmlFormats["comment"])
 
     def highlightDoctype(self, token:doctypeToken):
         ...
@@ -1533,9 +1545,8 @@ class IDE():
             return
 
         self.reset()
+        self.isParsing = 1
 
-        print("\n\n----- NEW DOCUMENT -----\n\n")
-        
         while self.parseIndex < self.raw.__len__():
             self.nextChar = self.raw[self.parseIndex]
             if self.nextChar == "\n":

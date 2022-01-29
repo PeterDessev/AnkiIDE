@@ -237,6 +237,8 @@ class characterToken():
 class commentToken():
     def __init__(self) -> None:
         self.data:istr = None
+        self.startIndex = -1
+        self.endIndex = -1
 
     def append(self, content:str) -> None:
         self.data.text += content
