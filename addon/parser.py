@@ -1,5 +1,12 @@
 from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor, QTextDocument, QFont
-import debugpy
+
+#region Debugpy Initialization
+import importlib.util as importUtil
+debugpySpec = importUtil.find_spec("debugpy")
+
+if debugpySpec is not None:
+    import debugpy
+#endregion
 
 from .tokens import *
 from .codePoints import *
