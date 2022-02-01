@@ -12,6 +12,7 @@
             },
             "format": {
                 "tag":{
+                    "color": "#F92672",
                     "style": ""
                 },
                 "attribute":{
