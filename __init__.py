@@ -7,20 +7,20 @@ from .addon import parser
 from .addon import default_config
 
 #region Debugpy Initialization
-# Check if debugpy is available and start debugging
 import importlib.util as importUtil
 debugpySpec = importUtil.find_spec("debugpy")
 foundDebugpy = debugpySpec is not None
 
 if(foundDebugpy):
     import debugpy
+    print("Awaiting debug on port 5678...")
     debugpy.listen(("localhost", 5678))
+    debugpy.wait_for_client()
+else:
+    print("Unable to load debugpy, continuing execution")
 #endregion
 
 def setUp(clayout: CardLayout) -> None:
-    if(foundDebugpy):
-        debugpy.wait_for_client()
-
     mw.IDEwidgets = []
     editor:QtWidgets.QTextEdit = clayout.tform.edit_area
 
