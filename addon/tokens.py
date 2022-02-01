@@ -143,6 +143,7 @@ class attribute():
     def __init__(self) -> None:
         self.name:istr = None
         self.value:istr = None
+        self.quoted = False
 
     def __eq__(self, __o: object) -> bool:
         if(isinstance(__o, attribute)):

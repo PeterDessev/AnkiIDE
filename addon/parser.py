@@ -1,4 +1,5 @@
 from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor, QTextDocument, QFont
+import debugpy
 
 from .tokens import *
 from .codePoints import *
@@ -101,6 +102,8 @@ class IDE():
         self.formElement = None
         self.characterTokenBuffer = []
         self.curScriptContents = ""
+
+        self.consCurlyBrackets = 0
 
         self.raw: str = self.cleanText()
         self.inScript = False
@@ -209,8 +212,6 @@ class IDE():
             if token.tagName == "script":
                 self.inScript = True
                 self.tokenState = tokenizationState.scriptDataState
-            else:
-                self.inScript = False
 
             if token.tagName == "plaintext":
                 self.tokenState = tokenizationState.plainTextState
@@ -222,6 +223,7 @@ class IDE():
         elif isinstance(token, endTagToken):
             self.highlightTag(token)
             if token.tagName == "script":
+                self.inScript = False
                 self.parseScript()
 
         elif isinstance(token, commentToken):
@@ -229,7 +231,10 @@ class IDE():
 
         elif isinstance(token, doctypeToken):
             self.highlightDoctype(token)
-                
+
+        elif isinstance(token, characterToken):
+            if self.inScript:
+                self.curScriptContents.__add__(token.char.text)                
         return
 
     def emitCharacter(self, char: str, index: int):
@@ -819,8 +824,12 @@ class IDE():
                 None
             elif self.nextChar == "\u0022":  # Quotation Mark (")
                 self.tokenState = tokenizationState.attributeValueDoubleQuotedState
+                self.token.currentAttribute.value = istr("", self.parseIndex)
+                self.token.currentAttribute.quoted = True
             elif self.nextChar == "\u0027":  # Apostrophe (')
                 self.tokenState = tokenizationState.attributeValueSingleQuotedState
+                self.token.currentAttribute.value = istr("", self.parseIndex)
+                self.token.currentAttribute.quoted = True
             elif self.nextChar == "\u003E":  # Greater than sign (>)
                 self.throwError(parseError.missingAttributeValue, self.parseIndex, 1)
                 self.tokenState = tokenizationState.dataState
@@ -828,6 +837,7 @@ class IDE():
             else:
                 self.reconsume = True
                 self.tokenState = tokenizationState.attributeValueUnquotedState
+                self.token.currentAttribute.value = istr("", self.parseIndex)
 
         def parseAttributeValueDoubleQuotedState(self):
             if self.nextChar == "\u0022":  # Quotation Mark (")
@@ -1527,10 +1537,40 @@ class IDE():
         cursor.setCharFormat(self.htmlFormats["comment"])
 
     def highlightDoctype(self, token:doctypeToken):
-        ...
+        cursor:QTextCursor = QTextCursor(self.document)
+        cursor.setPosition(token.tagOpen, QTextCursor.MoveMode(0))
+        
+        cursor.setPosition(token.tagClose, QTextCursor.MoveMode(1))
+        cursor.setCharFormat(self.htmlFormats["comment"])
 
     def highlightTag(self, token:tagToken):
-        ...
+        start = token.tagName.index
+        end = start + token.tagName.text.__len__()
+
+        cursor:QTextCursor = QTextCursor(self.document)
+        cursor.setPosition(start, QTextCursor.MoveMode(0))
+        
+        cursor.setPosition(end, QTextCursor.MoveMode(1))
+        cursor.setCharFormat(self.htmlFormats["tag"])
+
+        for attribute in token.attributes:
+            start = attribute.name.index
+            end = start + attribute.name.text.__len__()
+
+            cursor:QTextCursor = QTextCursor(self.document)
+            cursor.setPosition(start, QTextCursor.MoveMode(0))
+            
+            cursor.setPosition(end, QTextCursor.MoveMode(1))
+            cursor.setCharFormat(self.htmlFormats["attribute"])
+            
+            start = attribute.value.index
+            end = start + attribute.value.text.__len__() + 2 * attribute.quoted
+
+            cursor:QTextCursor = QTextCursor(self.document)
+            cursor.setPosition(start, QTextCursor.MoveMode(0))
+            
+            cursor.setPosition(end, QTextCursor.MoveMode(1))
+            cursor.setCharFormat(self.htmlFormats["keyword"])
 
     def parseText(self) -> None:
         "Parses the text according to the W3 HTML standard, then "\
