@@ -31,21 +31,7 @@ def setUp(clayout: CardLayout) -> None:
         print("Unable to lcoate config, using default config")
 
     
-    HTMLParse = parser.IDE(config, editor.document())
-    qconnect(editor.textChanged, HTMLParse.parseText)
-
+    HTMLParse = parser.IDE(config, editor)
     mw.IDEwidgets.append(HTMLParse)
-
-    # highlighter_widget = highlighter.Highlighter(config, editor.document())
-    # mw.my_widgets.append(highlighter_widget)
-    # editor.setTabChangesFocus(False)
-    # editor.setLineWrapMode(QTextEdit.NoWrap)
-
-    # highlighter.mutateEditArea(editor)
-    # highlighter_widget = highlighter.HTMLTextEdit()
-    # mw.my_widgets.append(highlighter_widget)
-    # editor.setTabChangesFocus(False)
-    # editor.setLineWrapMode(QTextEdit.NoWrap)
-    # editor.setLineWrapColumnOrWidth(0)
     
 gui_hooks.card_layout_will_show.append(setUp)

@@ -1,4 +1,10 @@
+from fcntl import F_GETLEASE
+import time
 from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor, QTextDocument, QFont
+from aqt import mw
+from PyQt5 import QtWidgets
+from aqt.qt import *
+from .. import esprima
 
 #region Debugpy Initialization
 import importlib.util as importUtil
@@ -15,6 +21,22 @@ from .characterReferences import *
 from . import default_config
 
 defConfig = default_config.DEFAULT_CONFIG
+
+def equivelentFormat(fmt: QTextCharFormat, other: QTextCharFormat) -> bool:
+    if not isinstance(fmt, QTextCharFormat) or not isinstance(other, QTextCharFormat):
+        return False
+        
+    if fmt.foreground().color().getRgb() != other.foreground().color().getRgb():
+        return False
+    
+    # if (fmt.fontItalic() != other.fontItalic() or
+    #     fmt.fontUnderline() != other.fontUnderLine() or 
+    #     fmt.fontOverline() != other.fontOverLine() or
+    #     fmt.fontStrikeOut() != other.fontStrikeOut() or
+    #     fmt.fontWeight() != other.fontWeight()):
+    #     return False
+
+    return True
 
 def setStyle(fmt: QTextCharFormat, style: str) -> None:
     "Sets fmt to have all of the format charactaristics " \
@@ -36,8 +58,9 @@ def setStyle(fmt: QTextCharFormat, style: str) -> None:
         fmt.setFontWeight(QFont.Bold)
 
 class IDE():
-    def __init__(self, config, document: QTextDocument) -> None:
-        self.document = document
+    def __init__(self, config, editor: QtWidgets.QTextEdit) -> None:
+        self.editor = editor
+        self.document = editor.document()
         self.config = config
 
         self.htmlStyles = 0
@@ -52,6 +75,93 @@ class IDE():
         self.isParsing = 0
 
         self.reset()
+
+        self.lambdaExp = lambda: self.parseText()
+
+        self.connect()
+
+        self.stateExecuter = {
+                tokenizationState.dataState: self.tokenizer.parseDataState,
+                tokenizationState.RCDataState: self.tokenizer.parseRCDataState,
+                tokenizationState.rawTextState: self.tokenizer.parseRawTextState,
+                tokenizationState.scriptDataState: self.tokenizer.parseScriptDataState,
+                tokenizationState.plainTextState: self.tokenizer.parsePlainTextState,
+                tokenizationState.tagOpenState: self.tokenizer.parseTagOpenState,
+                tokenizationState.endTagOpenState: self.tokenizer.parseEndTagOpenState,
+                tokenizationState.tagNameState: self.tokenizer.parseTagNameState,
+                tokenizationState.RCDataLessThanSignState: self.tokenizer.parseRCDataLessThanSignState,
+                tokenizationState.RCDATAEndTagOpenState: self.tokenizer.parseRCDATAEndTagOpenState,
+                tokenizationState.RCDATAEndTagNameState: self.tokenizer.parseRCDATAEndTagNameState,
+                tokenizationState.rawTextLessThanSignState: self.tokenizer.parseRawTextLessThanSignState,
+                tokenizationState.rawTextEndTagOpenState: self.tokenizer.parseRawTextEndTagOpenState,
+                tokenizationState.rawTextEndTagNameState: self.tokenizer.parseRawTextEndTagNameState,
+                tokenizationState.scriptDataLessThanSignState: self.tokenizer.parseScriptDataLessThanSignState,
+                tokenizationState.scriptDataEndTagOpenState: self.tokenizer.parseScriptDataEndTagOpenState,
+                tokenizationState.scriptDataEndTagNameState: self.tokenizer.parseScriptDataEndTagNameState,
+                tokenizationState.scriptDataEscapeStartState: self.tokenizer.parseScriptDataEscapeStartState,
+                tokenizationState.scriptDataEscapeStartDashState: self.tokenizer.parseScriptDataEscapeStartDashState,
+                tokenizationState.scriptDataEscapedState: self.tokenizer.parseScriptDataEscapedState,
+                tokenizationState.scriptDataEscapedDashState: self.tokenizer.parseScriptDataEscapedDashState,
+                tokenizationState.scriptDataEscapedDashDashState: self.tokenizer.parseScriptDataEscapedDashDashState,
+                tokenizationState.scriptDataEscapedLessThanSignState: self.tokenizer.parseScriptDataEscapedLessThanSignState,
+                tokenizationState.scriptDataEscapedEndTagOpenState: self.tokenizer.parseScriptDataEscapedEndTagOpenState,
+                tokenizationState.scriptDataEscapedEndTagNameState: self.tokenizer.parseScriptDataEscapedEndTagNameState,
+                tokenizationState.scriptDataDoubleEscapeStartState: self.tokenizer.parseScriptDataDoubleEscapeStartState,
+                tokenizationState.scriptDataDoubleEscapedState: self.tokenizer.parseScriptDataDoubleEscapedState,
+                tokenizationState.scriptDataDoubleEscapedDashState: self.tokenizer.parseScriptDataDoubleEscapedDashState,
+                tokenizationState.scriptDataDoubleEscapedDashDashState: self.tokenizer.parseScriptDataDoubleEscapedDashDashState,
+                tokenizationState.scriptDataDoubleEscapedLessThanSignState: self.tokenizer.parseScriptDataDoubleEscapedLessThanSignState,
+                tokenizationState.scriptDataDoubleEscapeEndState: self.tokenizer.parseScriptDataDoubleEscapeEndState,
+                tokenizationState.beforeAttributeNameState: self.tokenizer.parseBeforeAttributeNameState,
+                tokenizationState.attributeNameState: self.tokenizer.parseAttributeNameState,
+                tokenizationState.afterAttributeNameState: self.tokenizer.parseAfterAttributeNameState,
+                tokenizationState.beforeAttributeValueState: self.tokenizer.parseBeforeAttributeValueState,
+                tokenizationState.attributeValueDoubleQuotedState: self.tokenizer.parseAttributeValueDoubleQuotedState,
+                tokenizationState.attributeValueSingleQuotedState: self.tokenizer.parseAttributeValueSingleQuotedState,
+                tokenizationState.attributeValueUnquotedState: self.tokenizer.parseAttributeValueUnquotedState,
+                tokenizationState.afterAttributValueQuotedState: self.tokenizer.parseAfterAttributValueQuotedState,
+                tokenizationState.selfClosingStartTagState: self.tokenizer.parseSelfClosingStartTagState,
+                tokenizationState.bogusCommentState: self.tokenizer.parseBogusCommentState,
+                tokenizationState.markupDeclarationOpenState: self.tokenizer.parseMarkupDeclarationOpenState,
+                tokenizationState.commentStartState: self.tokenizer.parseCommentStartState,
+                tokenizationState.commentStartDashState: self.tokenizer.parseCommentStartDashState,
+                tokenizationState.commentState: self.tokenizer.parseCommentState,
+                tokenizationState.commentLessThanSignState: self.tokenizer.parseCommentLessThanSignState,
+                tokenizationState.commentLessThanSignBangState: self.tokenizer.parseCommentLessThanSignBangState,
+                tokenizationState.commentLessThanSignBangDashState: self.tokenizer.parseCommentLessThanSignBangDashState,
+                tokenizationState.commentLessThanSignBangDashDashState: self.tokenizer.parseCommentLessThanSignBangDashDashState,
+                tokenizationState.commentEndDashState: self.tokenizer.parseCommentEndDashState,
+                tokenizationState.commentEndState: self.tokenizer.parseCommentEndState,
+                tokenizationState.commentEndBangState: self.tokenizer.parseCommentEndBangState,
+                tokenizationState.doctypeState: self.tokenizer.parseDoctypeState,
+                tokenizationState.beforeDoctypeNameState: self.tokenizer.parseBeforeDoctypeNameState,
+                tokenizationState.doctypeNameState: self.tokenizer.parseDoctypeNameState,
+                tokenizationState.afterDoctypeNameState: self.tokenizer.parseAfterDoctypeNameState,
+                tokenizationState.afterDoctypePublicKeywordState: self.tokenizer.parseAfterDoctypePublicKeywordState,
+                tokenizationState.beforeDoctypePublicIDState: self.tokenizer.parseBeforeDoctypePublicIDState,
+                tokenizationState.doctypePublicIDDoubleQuotedState: self.tokenizer.parseDoctypePublicIDDoubleQuotedState,
+                tokenizationState.doctypePublicIDSingleQuotedState: self.tokenizer.parseDoctypePublicIDSingleQuotedState,
+                tokenizationState.afterDoctypePublicIDState: self.tokenizer.parseAfterDoctypePublicIDState,
+                tokenizationState.betweenDoctypePublicSystemIDsState: self.tokenizer.parseBetweenDoctypePublicSystemIDsState,
+                tokenizationState.afterDoctypeSystemKeywordState: self.tokenizer.parseAfterDoctypeSystemKeywordState,
+                tokenizationState.beforeDoctypeSystemIDState: self.tokenizer.parseBeforeDoctypeSystemIDState,
+                tokenizationState.doctypeSystemIDDoubleQuotedState: self.tokenizer.parseDoctypeSystemIDDoubleQuotedState,
+                tokenizationState.doctypeSystemIDSingleQuotedState: self.tokenizer.parseDoctypeSystemIDSingleQuotedState,
+                tokenizationState.afterDoctypeSystemIDState: self.tokenizer.parseAfterDoctypeSystemIDState,
+                tokenizationState.bogusDoctypeState: self.tokenizer.parseBogusDoctypeState,
+                tokenizationState.CDATASectionState: self.tokenizer.parseCDATASectionState,
+                tokenizationState.CDATASectionBracketState: self.tokenizer.parseCDATASectionBracketState,
+                tokenizationState.CDATASectionEndState: self.tokenizer.parseCDATASectionEndState,
+                tokenizationState.characterReferenceState: self.tokenizer.parseCharacterReferenceState,
+                tokenizationState.namedCharacterReferenceState: self.tokenizer.parseNamedCharacterReferenceState,
+                tokenizationState.ambiguousAmpersandState: self.tokenizer.parseAmbiguousAmpersandState,
+                tokenizationState.numericCharacterReferenceState: self.tokenizer.parseNumericCharacterReferenceState,
+                tokenizationState.hexCharacterReferenceStartState: self.tokenizer.parseHexCharacterReferenceStartState,
+                tokenizationState.decCharacterReferenceStartState: self.tokenizer.parseDecCharacterReferenceStartState,
+                tokenizationState.hexCharacterReferenceState: self.tokenizer.parseHexCharacterReferenceState,
+                tokenizationState.decCharacterReferenceState: self.tokenizer.parseDecCharacterReferenceState,
+                tokenizationState.numericCharacterReferenceEndState: self.tokenizer.parseNumericCharacterReferenceEndState
+            }
 
         # region Config Initialization
         try:
@@ -83,6 +193,12 @@ class IDE():
         
         self.initializeFormats()
 
+    def connect(self) -> None:
+        self.editor.textChanged.connect(self.lambdaExp)
+
+    def disconnect(self) -> None:
+        self.editor.textChanged.disconnect(self.lambdaExp)
+
     def reset(self):       
         self.tokenState: tokenizationState = tokenizationState.dataState
         self.returnState = None
@@ -107,13 +223,13 @@ class IDE():
         self.activeFormattingElements = []
         self.headElement = None
         self.formElement = None
-        self.characterTokenBuffer = []
         self.curScriptContents = ""
 
         self.consCurlyBrackets = 0
 
         self.raw: str = self.cleanText()
         self.inScript = False
+        self.scriptIndex = 0
 
     def initializeFormats(self) -> None:
         "Initialize all formats in the config into QTextCharFormat objects"
@@ -187,36 +303,55 @@ class IDE():
             return False
         return token.tagName == self.lastEmitedStartTagToken.tagName
 
-    def flushCharacterTokenBuffer(self) -> None:
-        if self.characterTokenBuffer.__len__() > 0:
-            for characterTokenInst in self.characterTokenBuffer: 
-                print(characterTokenInst, end = "")
-            print()
+    def highlightIfNeeded(self, start, end, formatting):
+        cursor:QTextCursor = QTextCursor(self.document)
+        for i in range(start, end):
+            cursor.setPosition(i, QTextCursor.MoveMode(0))
+            cursor.setPosition(i + 1, QTextCursor.MoveMode(1))
+            
+            if not equivelentFormat(cursor.charFormat(), formatting):
+                cursor.setCharFormat(formatting)
 
     # TODO: Implement error Handling
     def throwError(self, error: parseError, index: int, len: int) -> None:
-        print("Encountered error %s in line %d, character %d with length %d" % (error.name, self.lineCount + 1, self.lineIndex + 1, len))          
+        # print("Encountered error %s in line %d, ch    # if (fmt.fontItalic() != other.fontItalic() or
+        fmt:QTextCharFormat = QTextCharFormat()
+        fmt.setUnderlineColor(QColor("#FF0000"))
+        fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
+        self.highlightIfNeeded(index - 1, index + len - 1, fmt)
 
     # TODO: Implement Script Parsing and Highlighting
     def parseScript(self):
+        tokens = esprima.tokenize(self.curScriptContents, {"range": True, "comment": True})
+        
+        scriptTokenNameConversion = {
+            "Boolean": "number",
+            "<end>": "comment",
+            "Identifier": "identifier",
+            "Keyword": "keyword",
+            "Null": "number",
+            "Numeric": "number",
+            "Punctuator": "operator",
+            "String": "string",
+            "RegularExpression": "number",
+            "Template": "comment"
+        }
+        
+        for token in tokens:
+            self.highlightIfNeeded(self.scriptIndex + token.range[0], self.scriptIndex + token.range[1], self.jsFormats[scriptTokenNameConversion[token.type]])
         self.curScriptContents = ""
 
     # region Token Parsing
     def emitToken(self, token) -> None:
-        # if not isinstance(token, characterToken):
-        #     self.flushCharacterTokenBuffer()
-        #     print(token)
-        #     self.characterTokenBuffer = []
-        # else:
-        #     if self.inScript:
-        #         self.curScriptContents += token.char
-        #     self.characterTokenBuffer.append(token.char)
+        if isinstance(token, characterToken) and self.inScript:
+            self.curScriptContents += token.char
 
         if isinstance(token, startTagToken):
             self.highlightTag(token)
             self.lastEmitedStartTagToken = token
 
             if token.tagName == "script":
+                self.scriptIndex = self.parseIndex + 1
                 self.inScript = True
                 self.tokenState = tokenizationState.scriptDataState
 
@@ -953,6 +1088,8 @@ class IDE():
                 self.parseIndex += 6
             else:
                 self.throwError(parseError.incorrectlyOpenedComment, self.parseIndex, 1)
+                self.token = commentToken()
+                self.token.data = istr("", self.parseIndex)
                 self.tokenState = tokenizationState.bogusCommentState
                 self.reconsume = True
 
@@ -1537,47 +1674,46 @@ class IDE():
             self.tokenState = self.returnState
 
     def highlightComment(self, token:commentToken):
-        cursor:QTextCursor = QTextCursor(self.document)
-        cursor.setPosition(token.startIndex, QTextCursor.MoveMode(0))
+        ...
+        # cursor:QTextCursor = QTextCursor(self.document)
+        # cursor.setPosition(token.startIndex, QTextCursor.MoveMode(0))
         
-        cursor.setPosition(token.endIndex, QTextCursor.MoveMode(1))
-        cursor.setCharFormat(self.htmlFormats["comment"])
+        # cursor.setPosition(token.endIndex, QTextCursor.MoveMode(1))
+        # cursor.setCharFormat(self.htmlFormats["comment"])
 
     def highlightDoctype(self, token:doctypeToken):
-        cursor:QTextCursor = QTextCursor(self.document)
-        cursor.setPosition(token.tagOpen, QTextCursor.MoveMode(0))
+        ...
+        # cursor:QTextCursor = QTextCursor(self.document)
+        # cursor.setPosition(token.tagOpen, QTextCursor.MoveMode(0))
         
-        cursor.setPosition(token.tagClose, QTextCursor.MoveMode(1))
-        cursor.setCharFormat(self.htmlFormats["comment"])
+        # cursor.setPosition(token.tagClose, QTextCursor.MoveMode(1))
+        # cursor.setCharFormat(self.htmlFormats["comment"])
 
     def highlightTag(self, token:tagToken):
+        if token.tagName.index == -1:
+            return
+
         start = token.tagName.index
         end = start + token.tagName.text.__len__()
 
-        cursor:QTextCursor = QTextCursor(self.document)
-        cursor.setPosition(start, QTextCursor.MoveMode(0))
-        
-        cursor.setPosition(end, QTextCursor.MoveMode(1))
-        cursor.setCharFormat(self.htmlFormats["tag"])
+        self.highlightIfNeeded(start, end, self.htmlFormats["tag"])
 
         for attribute in token.attributes:
+            if attribute.name.index == -1:
+                continue
+                
             start = attribute.name.index
             end = start + attribute.name.text.__len__()
 
-            cursor:QTextCursor = QTextCursor(self.document)
-            cursor.setPosition(start, QTextCursor.MoveMode(0))
-            
-            cursor.setPosition(end, QTextCursor.MoveMode(1))
-            cursor.setCharFormat(self.htmlFormats["attribute"])
+            self.highlightIfNeeded(start, end, self.htmlFormats["attribute"])
+
+            if attribute.value.index == -1:
+                continue
             
             start = attribute.value.index
             end = start + attribute.value.text.__len__() + 2 * attribute.quoted
 
-            cursor:QTextCursor = QTextCursor(self.document)
-            cursor.setPosition(start, QTextCursor.MoveMode(0))
-            
-            cursor.setPosition(end, QTextCursor.MoveMode(1))
-            cursor.setCharFormat(self.htmlFormats["keyword"])
+            self.highlightIfNeeded(start, end, self.htmlFormats["keyword"])
 
     def parseText(self) -> None:
         "Parses the text according to the W3 HTML standard, then "\
@@ -1587,12 +1723,18 @@ class IDE():
         # text is edited the qconnect in __init__.py is triggered
         # causing the text to be edited in this funciton, triggering
         # the qconnect
-        # TODO: Create a less janky way of preventing self-triggered parsing
-        if(self.isParsing == 1):
-            return
+        startTime = time.perf_counter()
+        self.disconnect()
 
         self.reset()
-        self.isParsing = 1
+
+        # Reset colors
+        # cursor:QTextCursor = QTextCursor(self.document)
+        # cursor.setPosition(0, QTextCursor.MoveMode(0))
+        # cursor.setPosition(self.raw.__len__(), QTextCursor.MoveMode(1))
+
+        # fmt = QTextCharFormat()
+        # cursor.setCharFormat(fmt)
 
         while self.parseIndex < self.raw.__len__():
             self.nextChar = self.raw[self.parseIndex]
@@ -1602,88 +1744,7 @@ class IDE():
             else:
                 self.lineIndex += 1
 
-            {
-                tokenizationState.dataState: self.tokenizer.parseDataState,
-                tokenizationState.RCDataState: self.tokenizer.parseRCDataState,
-                tokenizationState.rawTextState: self.tokenizer.parseRawTextState,
-                tokenizationState.scriptDataState: self.tokenizer.parseScriptDataState,
-                tokenizationState.plainTextState: self.tokenizer.parsePlainTextState,
-                tokenizationState.tagOpenState: self.tokenizer.parseTagOpenState,
-                tokenizationState.endTagOpenState: self.tokenizer.parseEndTagOpenState,
-                tokenizationState.tagNameState: self.tokenizer.parseTagNameState,
-                tokenizationState.RCDataLessThanSignState: self.tokenizer.parseRCDataLessThanSignState,
-                tokenizationState.RCDATAEndTagOpenState: self.tokenizer.parseRCDATAEndTagOpenState,
-                tokenizationState.RCDATAEndTagNameState: self.tokenizer.parseRCDATAEndTagNameState,
-                tokenizationState.rawTextLessThanSignState: self.tokenizer.parseRawTextLessThanSignState,
-                tokenizationState.rawTextEndTagOpenState: self.tokenizer.parseRawTextEndTagOpenState,
-                tokenizationState.rawTextEndTagNameState: self.tokenizer.parseRawTextEndTagNameState,
-                tokenizationState.scriptDataLessThanSignState: self.tokenizer.parseScriptDataLessThanSignState,
-                tokenizationState.scriptDataEndTagOpenState: self.tokenizer.parseScriptDataEndTagOpenState,
-                tokenizationState.scriptDataEndTagNameState: self.tokenizer.parseScriptDataEndTagNameState,
-                tokenizationState.scriptDataEscapeStartState: self.tokenizer.parseScriptDataEscapeStartState,
-                tokenizationState.scriptDataEscapeStartDashState: self.tokenizer.parseScriptDataEscapeStartDashState,
-                tokenizationState.scriptDataEscapedState: self.tokenizer.parseScriptDataEscapedState,
-                tokenizationState.scriptDataEscapedDashState: self.tokenizer.parseScriptDataEscapedDashState,
-                tokenizationState.scriptDataEscapedDashDashState: self.tokenizer.parseScriptDataEscapedDashDashState,
-                tokenizationState.scriptDataEscapedLessThanSignState: self.tokenizer.parseScriptDataEscapedLessThanSignState,
-                tokenizationState.scriptDataEscapedEndTagOpenState: self.tokenizer.parseScriptDataEscapedEndTagOpenState,
-                tokenizationState.scriptDataEscapedEndTagNameState: self.tokenizer.parseScriptDataEscapedEndTagNameState,
-                tokenizationState.scriptDataDoubleEscapeStartState: self.tokenizer.parseScriptDataDoubleEscapeStartState,
-                tokenizationState.scriptDataDoubleEscapedState: self.tokenizer.parseScriptDataDoubleEscapedState,
-                tokenizationState.scriptDataDoubleEscapedDashState: self.tokenizer.parseScriptDataDoubleEscapedDashState,
-                tokenizationState.scriptDataDoubleEscapedDashDashState: self.tokenizer.parseScriptDataDoubleEscapedDashDashState,
-                tokenizationState.scriptDataDoubleEscapedLessThanSignState: self.tokenizer.parseScriptDataDoubleEscapedLessThanSignState,
-                tokenizationState.scriptDataDoubleEscapeEndState: self.tokenizer.parseScriptDataDoubleEscapeEndState,
-                tokenizationState.beforeAttributeNameState: self.tokenizer.parseBeforeAttributeNameState,
-                tokenizationState.attributeNameState: self.tokenizer.parseAttributeNameState,
-                tokenizationState.afterAttributeNameState: self.tokenizer.parseAfterAttributeNameState,
-                tokenizationState.beforeAttributeValueState: self.tokenizer.parseBeforeAttributeValueState,
-                tokenizationState.attributeValueDoubleQuotedState: self.tokenizer.parseAttributeValueDoubleQuotedState,
-                tokenizationState.attributeValueSingleQuotedState: self.tokenizer.parseAttributeValueSingleQuotedState,
-                tokenizationState.attributeValueUnquotedState: self.tokenizer.parseAttributeValueUnquotedState,
-                tokenizationState.afterAttributValueQuotedState: self.tokenizer.parseAfterAttributValueQuotedState,
-                tokenizationState.selfClosingStartTagState: self.tokenizer.parseSelfClosingStartTagState,
-                tokenizationState.bogusCommentState: self.tokenizer.parseBogusCommentState,
-                tokenizationState.markupDeclarationOpenState: self.tokenizer.parseMarkupDeclarationOpenState,
-                tokenizationState.commentStartState: self.tokenizer.parseCommentStartState,
-                tokenizationState.commentStartDashState: self.tokenizer.parseCommentStartDashState,
-                tokenizationState.commentState: self.tokenizer.parseCommentState,
-                tokenizationState.commentLessThanSignState: self.tokenizer.parseCommentLessThanSignState,
-                tokenizationState.commentLessThanSignBangState: self.tokenizer.parseCommentLessThanSignBangState,
-                tokenizationState.commentLessThanSignBangDashState: self.tokenizer.parseCommentLessThanSignBangDashState,
-                tokenizationState.commentLessThanSignBangDashDashState: self.tokenizer.parseCommentLessThanSignBangDashDashState,
-                tokenizationState.commentEndDashState: self.tokenizer.parseCommentEndDashState,
-                tokenizationState.commentEndState: self.tokenizer.parseCommentEndState,
-                tokenizationState.commentEndBangState: self.tokenizer.parseCommentEndBangState,
-                tokenizationState.doctypeState: self.tokenizer.parseDoctypeState,
-                tokenizationState.beforeDoctypeNameState: self.tokenizer.parseBeforeDoctypeNameState,
-                tokenizationState.doctypeNameState: self.tokenizer.parseDoctypeNameState,
-                tokenizationState.afterDoctypeNameState: self.tokenizer.parseAfterDoctypeNameState,
-                tokenizationState.afterDoctypePublicKeywordState: self.tokenizer.parseAfterDoctypePublicKeywordState,
-                tokenizationState.beforeDoctypePublicIDState: self.tokenizer.parseBeforeDoctypePublicIDState,
-                tokenizationState.doctypePublicIDDoubleQuotedState: self.tokenizer.parseDoctypePublicIDDoubleQuotedState,
-                tokenizationState.doctypePublicIDSingleQuotedState: self.tokenizer.parseDoctypePublicIDSingleQuotedState,
-                tokenizationState.afterDoctypePublicIDState: self.tokenizer.parseAfterDoctypePublicIDState,
-                tokenizationState.betweenDoctypePublicSystemIDsState: self.tokenizer.parseBetweenDoctypePublicSystemIDsState,
-                tokenizationState.afterDoctypeSystemKeywordState: self.tokenizer.parseAfterDoctypeSystemKeywordState,
-                tokenizationState.beforeDoctypeSystemIDState: self.tokenizer.parseBeforeDoctypeSystemIDState,
-                tokenizationState.doctypeSystemIDDoubleQuotedState: self.tokenizer.parseDoctypeSystemIDDoubleQuotedState,
-                tokenizationState.doctypeSystemIDSingleQuotedState: self.tokenizer.parseDoctypeSystemIDSingleQuotedState,
-                tokenizationState.afterDoctypeSystemIDState: self.tokenizer.parseAfterDoctypeSystemIDState,
-                tokenizationState.bogusDoctypeState: self.tokenizer.parseBogusDoctypeState,
-                tokenizationState.CDATASectionState: self.tokenizer.parseCDATASectionState,
-                tokenizationState.CDATASectionBracketState: self.tokenizer.parseCDATASectionBracketState,
-                tokenizationState.CDATASectionEndState: self.tokenizer.parseCDATASectionEndState,
-                tokenizationState.characterReferenceState: self.tokenizer.parseCharacterReferenceState,
-                tokenizationState.namedCharacterReferenceState: self.tokenizer.parseNamedCharacterReferenceState,
-                tokenizationState.ambiguousAmpersandState: self.tokenizer.parseAmbiguousAmpersandState,
-                tokenizationState.numericCharacterReferenceState: self.tokenizer.parseNumericCharacterReferenceState,
-                tokenizationState.hexCharacterReferenceStartState: self.tokenizer.parseHexCharacterReferenceStartState,
-                tokenizationState.decCharacterReferenceStartState: self.tokenizer.parseDecCharacterReferenceStartState,
-                tokenizationState.hexCharacterReferenceState: self.tokenizer.parseHexCharacterReferenceState,
-                tokenizationState.decCharacterReferenceState: self.tokenizer.parseDecCharacterReferenceState,
-                tokenizationState.numericCharacterReferenceEndState: self.tokenizer.parseNumericCharacterReferenceEndState
-            }[self.tokenState](self)
+            self.stateExecuter[self.tokenState](self)
 
             if(not self.reconsume):
                 # curChar = self.nextChar
@@ -1691,6 +1752,7 @@ class IDE():
             else:
                 self.reconsume = False
 
-        self.flushCharacterTokenBuffer()
         # Enable parsing on edits
-        self.isParsing = 0
+        self.connect()
+        endTime = time.perf_counter()
+        print(endTime - startTime)
