@@ -1,4 +1,3 @@
-from fcntl import F_GETLEASE
 import time
 from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor, QTextDocument, QFont
 from aqt import mw
