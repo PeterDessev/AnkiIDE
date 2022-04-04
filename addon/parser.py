@@ -162,34 +162,6 @@ class IDE():
                 tokenizationState.decCharacterReferenceState: self.tokenizer.parseDecCharacterReferenceState,
                 tokenizationState.numericCharacterReferenceEndState: self.tokenizer.parseNumericCharacterReferenceEndState
             }
-
-        # region Config Initialization
-        try:
-            self.htmlStyles = config["html"][config["profile"]
-                                             ["html"]]["format"]
-        except:
-            print("AnkiIDE ERROR: Error accessing profile %s for html, check addon config"
-                  % config["profile"]["html"])
-            self.htmlStyles = defConfig["html"][config["profile"]
-                                                ["html"]]["format"]
-
-        try:
-            self.jsStyles = config["javascript"][config["profile"]
-                                                 ["javascript"]]["format"]
-        except:
-            print("AnkiIDE ERROR: Error accessing profile %s for javascript, check addon config"
-                  % config["profile"]["javascript"])
-            self.jsStyles = defConfig["javascript"][config["profile"]
-                                                    ["javascript"]]["format"]
-
-        try:
-            self.cssStyles = config["css"][config["profile"]["css"]]["format"]
-        except:
-            print("AnkiIDE ERROR: Error accessing profile %s for css, check addon config"
-                  % config["profile"]["css"])
-            self.cssStyles = defConfig["css"][config["profile"]
-                                              ["css"]]["format"]
-        # endregion
         
         self.initializeFormats()
 
@@ -199,7 +171,7 @@ class IDE():
     def disconnect(self) -> None:
         self.editor.textChanged.disconnect(self.lambdaExp)
 
-    def reset(self):       
+    def reset(self):
         self.tokenState: tokenizationState = tokenizationState.dataState
         self.returnState = None
 
@@ -230,11 +202,28 @@ class IDE():
         self.raw: str = self.cleanText()
         self.inScript = False
         self.scriptIndex = 0
+        
+        cursor:QTextCursor = QTextCursor(self.document)
+        cursor.setPosition(0, QTextCursor.MoveMode(0))
+        cursor.setPosition(self.raw.__len__(), QTextCursor.MoveMode(1))
+        fmt:QTextCharFormat = QTextCharFormat()
+        fmt.setForeground(QColor("#FFFFFF"))
+        cursor.setCharFormat(fmt)
 
+        
     def initializeFormats(self) -> None:
         "Initialize all formats in the config into QTextCharFormat objects"
 
         # region HTML Format Initialization
+        try:
+            self.htmlStyles = self.config["html"][self.config["profile"]
+                                             ["html"]]["format"]
+        except:
+            print("AnkiIDE ERROR: Error accessing profile %s for html, check addon config"
+                  % self.config["profile"]["html"])
+            self.htmlStyles = defConfig["html"][self.config["profile"]
+                                                ["html"]]["format"]
+
         for formatName in self.htmlStyles:
             fmt = QTextCharFormat()
             try:
@@ -242,17 +231,28 @@ class IDE():
             except:
                 print("AnkiIDE Warning: Config profile \"%s\" is missing color attribute for \"%s\" format in HTML"
                       % (self.config["profile"]["html"], formatName))
+                fmt.setForeground(QColor(defConfig[formatName]["color"]))
 
             try:
                 setStyle(fmt, self.htmlStyles[formatName]["style"])
             except:
                 print("AnkiIDE Warning: Config profile \"%s\" is missing style attribute for \"%s\" format in HTML"
                       % (self.config["profile"]["html"], formatName))
+                setStyle(fmt, defConfig[formatName]["style"])
 
             self.htmlFormats[formatName] = fmt
         # endregion
 
         # region JS Format Initialization
+        try:
+            self.jsStyles = self.config["javascript"][self.config["profile"]
+                                                 ["javascript"]]["format"]
+        except:
+            print("AnkiIDE ERROR: Error accessing profile %s for javascript, check addon config"
+                  % self.config["profile"]["javascript"])
+            self.jsStyles = defConfig["javascript"][self.config["profile"]
+                                                    ["javascript"]]["format"]
+
         for formatName in self.jsStyles:
             fmt = QTextCharFormat()
             try:
@@ -271,6 +271,14 @@ class IDE():
         # endregion
 
         # region CSS Format Initialization
+        try:
+            self.cssStyles = self.config["css"][self.config["profile"]["css"]]["format"]
+        except:
+            print("AnkiIDE ERROR: Error accessing profile %s for css, check addon config"
+                  % self.config["profile"]["css"])
+            self.cssStyles = defConfig["css"][self.config["profile"]
+                                              ["css"]]["format"]
+
         for formatName in self.cssStyles:
             fmt = QTextCharFormat()
             try:
@@ -354,8 +362,7 @@ class IDE():
                 self.scriptIndex = self.parseIndex + 1
                 self.inScript = True
                 self.tokenState = tokenizationState.scriptDataState
-
-            if token.tagName == "plaintext":
+            elif token.tagName == "plaintext":
                 self.tokenState = tokenizationState.plainTextState
             elif token.tagName in ["textarea", "title"]:
                 self.tokenState = tokenizationState.RCDataState
@@ -1674,20 +1681,18 @@ class IDE():
             self.tokenState = self.returnState
 
     def highlightComment(self, token:commentToken):
-        ...
-        # cursor:QTextCursor = QTextCursor(self.document)
-        # cursor.setPosition(token.startIndex, QTextCursor.MoveMode(0))
+        cursor:QTextCursor = QTextCursor(self.document)
+        cursor.setPosition(token.startIndex, QTextCursor.MoveMode(0))
         
-        # cursor.setPosition(token.endIndex, QTextCursor.MoveMode(1))
-        # cursor.setCharFormat(self.htmlFormats["comment"])
+        cursor.setPosition(token.endIndex, QTextCursor.MoveMode(1))
+        cursor.setCharFormat(self.htmlFormats["comment"])
 
     def highlightDoctype(self, token:doctypeToken):
-        ...
-        # cursor:QTextCursor = QTextCursor(self.document)
-        # cursor.setPosition(token.tagOpen, QTextCursor.MoveMode(0))
+        cursor:QTextCursor = QTextCursor(self.document)
+        cursor.setPosition(token.tagOpen, QTextCursor.MoveMode(0))
         
-        # cursor.setPosition(token.tagClose, QTextCursor.MoveMode(1))
-        # cursor.setCharFormat(self.htmlFormats["comment"])
+        cursor.setPosition(token.tagClose, QTextCursor.MoveMode(1))
+        cursor.setCharFormat(self.htmlFormats["comment"])
 
     def highlightTag(self, token:tagToken):
         if token.tagName.index == -1:
@@ -1727,14 +1732,6 @@ class IDE():
         self.disconnect()
 
         self.reset()
-
-        # Reset colors
-        # cursor:QTextCursor = QTextCursor(self.document)
-        # cursor.setPosition(0, QTextCursor.MoveMode(0))
-        # cursor.setPosition(self.raw.__len__(), QTextCursor.MoveMode(1))
-
-        # fmt = QTextCharFormat()
-        # cursor.setCharFormat(fmt)
 
         while self.parseIndex < self.raw.__len__():
             self.nextChar = self.raw[self.parseIndex]
