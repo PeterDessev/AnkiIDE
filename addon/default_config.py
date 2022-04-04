@@ -48,6 +48,10 @@ DEFAULT_CONFIG = {
                     "color": "#F92672",
                     "style": ""
                 },
+                "identifier":{
+                    "color": "#FFFFFF",
+                    "style": ""
+                },
                 "operator":{
                     "color": "#F92672",
                     "style": ""
@@ -60,7 +64,7 @@ DEFAULT_CONFIG = {
                     "color": "#AE81FF",
                     "style": ""
                 },
-                "this":{
+                "classIdentifier":{
                     "color": "#FD971F",
                     "style": ""
                 },

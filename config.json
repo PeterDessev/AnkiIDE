@@ -12,6 +12,7 @@
             },
             "format": {
                 "tag":{
+                    "color": "#F92672",
                     "style": ""
                 },
                 "attribute":{
@@ -48,6 +49,10 @@
                     "color": "#F92672",
                     "style": ""
                 },
+                "identifier":{
+                    "color": "#FFFFFF",
+                    "style": ""
+                },
                 "operator":{
                     "color": "#F92672",
                     "style": ""
@@ -60,7 +65,7 @@
                     "color": "#AE81FF",
                     "style": ""
                 },
-                "this":{
+                "classIdentifier":{
                     "color": "#FD971F",
                     "style": ""
                 },
