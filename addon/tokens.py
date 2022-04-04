@@ -149,14 +149,17 @@ class attribute():
             return self.name.text == __o.name.text
         return False
 
-class doctypeToken():
+class Token():
     def __init__(self) -> None:
         self.tagOpen:int = None
+        self.tagClose:int = None
+
+class doctypeToken(Token):
+    def __init__(self) -> None:   
         self.name:istr = None
         self.publicID:istr = None
         self.systemID:istr = None
         self.forceQuirks:bool = False
-        self.tagClose:int = None
 
     def __str__(self) -> str:
         ret = "Doctype Token\n"
@@ -165,14 +168,12 @@ class doctypeToken():
         ret += "    " + self.systemID
         return ret
 
-class tagToken():
+class tagToken(Token):
     def __init__(self) -> None:
-        self.tagOpen:int = None
         self.tagName:istr = None
         self.selfClosing:bool = False
         self.attributes:List[attribute] = []
         self.currentAttribute:attribute = None
-        self.tagClose:int = None
         # canPushCurrentAttribute:bool = None
 
     def __str__(self) -> str:
@@ -234,11 +235,9 @@ class characterToken():
     def __str__(self) -> str:
         return str(self.char)
     
-class commentToken():
+class commentToken(Token):
     def __init__(self) -> None:
         self.data:istr = None
-        self.startIndex = -1
-        self.endIndex = -1
 
     def append(self, content:str) -> None:
         self.data.text += content
