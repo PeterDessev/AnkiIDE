@@ -207,6 +207,7 @@ class IDE():
         cursor.setPosition(self.raw.__len__(), QTextCursor.MoveMode(1))
         fmt:QTextCharFormat = QTextCharFormat()
         fmt.setForeground(QColor("#FFFFFF"))
+        fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.NoUnderline)
         cursor.setCharFormat(fmt)
 
         
