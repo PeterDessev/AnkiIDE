@@ -2,6 +2,7 @@ from PyQt5 import QtWidgets
 from aqt import mw, gui_hooks
 from aqt.qt import *
 from aqt.clayout import CardLayout
+from aqt.utils import showWarning
 
 from .addon import parser
 from .addon import default_config
@@ -28,7 +29,7 @@ def setUp(clayout: CardLayout) -> None:
         config = mw.addonManager.getConfig(__name__)
     except AttributeError:
         config = default_config.DEFAULT_CONFIG
-        print("Unable to lcoate config, using default config")
+        showWarning("Unable to lcoate config, using default config")
 
     
     HTMLParse = parser.IDE(config, editor)

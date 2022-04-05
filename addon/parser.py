@@ -1,9 +1,11 @@
 import time
-from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor, QTextDocument, QFont
-from aqt import mw
+from tkinter.messagebox import showinfo
+from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor, QFont
 from PyQt5 import QtWidgets
+from aqt.utils import showWarning
 from aqt.qt import *
 from .. import esprima
+from aqt.theme import theme_manager
 
 #region Debugpy Initialization
 import importlib.util as importUtil
@@ -206,7 +208,10 @@ class IDE():
         cursor.setPosition(0, QTextCursor.MoveMode(0))
         cursor.setPosition(self.raw.__len__(), QTextCursor.MoveMode(1))
         fmt:QTextCharFormat = QTextCharFormat()
-        fmt.setForeground(QColor("#FFFFFF"))
+        if theme_manager.get_night_mode():
+            fmt.setForeground(QColor("#FFFFFF"))
+        else:
+            fmt.setForeground(QColor("#000000"))
         fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.NoUnderline)
         cursor.setCharFormat(fmt)
 
@@ -219,7 +224,7 @@ class IDE():
             self.htmlStyles = self.config["html"][self.config["profile"]
                                              ["html"]]["format"]
         except:
-            print("AnkiIDE ERROR: Error accessing profile %s for html, check addon config"
+            showWarning("AnkiIDE ERROR: Error accessing profile %s for html, check addon config"
                   % self.config["profile"]["html"])
             self.htmlStyles = defConfig["html"][self.config["profile"]
                                                 ["html"]]["format"]
@@ -229,14 +234,14 @@ class IDE():
             try:
                 fmt.setForeground(QColor(self.htmlStyles[formatName]["color"]))
             except:
-                print("AnkiIDE Warning: Config profile \"%s\" is missing color attribute for \"%s\" format in HTML"
+                showWarning("AnkiIDE Warning: Config profile \"%s\" is missing color attribute for \"%s\" format in HTML"
                       % (self.config["profile"]["html"], formatName))
                 fmt.setForeground(QColor(defConfig[formatName]["color"]))
 
             try:
                 setStyle(fmt, self.htmlStyles[formatName]["style"])
             except:
-                print("AnkiIDE Warning: Config profile \"%s\" is missing style attribute for \"%s\" format in HTML"
+                showWarning("AnkiIDE Warning: Config profile \"%s\" is missing style attribute for \"%s\" format in HTML"
                       % (self.config["profile"]["html"], formatName))
                 setStyle(fmt, defConfig[formatName]["style"])
 
@@ -248,7 +253,7 @@ class IDE():
             self.jsStyles = self.config["javascript"][self.config["profile"]
                                                  ["javascript"]]["format"]
         except:
-            print("AnkiIDE ERROR: Error accessing profile %s for javascript, check addon config"
+            showWarning("AnkiIDE ERROR: Error accessing profile %s for javascript, check addon config"
                   % self.config["profile"]["javascript"])
             self.jsStyles = defConfig["javascript"][self.config["profile"]
                                                     ["javascript"]]["format"]
@@ -258,13 +263,13 @@ class IDE():
             try:
                 fmt.setForeground(QColor(self.jsStyles[formatName]["color"]))
             except:
-                print("AnkiIDE Warning: Config profile \"%s\" is missing color attribute for \"%s\" format in javascript"
+                showWarning("AnkiIDE Warning: Config profile \"%s\" is missing color attribute for \"%s\" format in javascript"
                       % (self.config["profile"]["javascript"], formatName))
 
             try:
                 setStyle(fmt, self.jsStyles[formatName]["style"])
             except:
-                print("AnkiIDE Warning: Config profile \"%s\" is missing style attribute for \"%s\" format in javascript"
+                showWarning("AnkiIDE Warning: Config profile \"%s\" is missing style attribute for \"%s\" format in javascript"
                       % (self.config["profile"]["javascript"], formatName))
 
             self.jsFormats[formatName] = fmt
@@ -274,7 +279,7 @@ class IDE():
         try:
             self.cssStyles = self.config["css"][self.config["profile"]["css"]]["format"]
         except:
-            print("AnkiIDE ERROR: Error accessing profile %s for css, check addon config"
+            showWarning("AnkiIDE ERROR: Error accessing profile %s for css, check addon config"
                   % self.config["profile"]["css"])
             self.cssStyles = defConfig["css"][self.config["profile"]
                                               ["css"]]["format"]
@@ -284,13 +289,13 @@ class IDE():
             try:
                 fmt.setForeground(QColor(self.cssStyles[formatName]["color"]))
             except:
-                print("AnkiIDE Warning: Config profile \"%s\" is missing color attribute for \"%s\" format in css"
+                showWarning("AnkiIDE Warning: Config profile \"%s\" is missing color attribute for \"%s\" format in css"
                       % (self.config["profile"]["css"], formatName))
 
             try:
                 setStyle(fmt, self.cssStyles[formatName]["style"])
             except:
-                print("AnkiIDE Warning: Config profile \"%s\" is missing style attribute for \"%s\" format in css"
+                showWarning("AnkiIDE Warning: Config profile \"%s\" is missing style attribute for \"%s\" format in css"
                       % (self.config["profile"]["css"], formatName))
 
             self.cssFormats[formatName] = fmt
@@ -307,7 +312,7 @@ class IDE():
         if(self.lastEmitedStartTagToken is None):
             return False
         if(not isinstance(token, endTagToken)):
-            print("AnkiIDE ERROR: EndTagToken expected but was not recieved for isAppropriateEndTagToken")
+            # print("AnkiIDE ERROR: EndTagToken expected but was not recieved for isAppropriateEndTagToken")
             return False
         return token.tagName == self.lastEmitedStartTagToken.tagName
 
@@ -389,7 +394,7 @@ class IDE():
         for i in range(0, buffer.__len__()):
             self.emitCharacter(buffer[i], index - buffer.__len__() + i)
 
-    def pushAttribute(self, token: tagToken):
+    def checkPushAttribute(self, token: tagToken):
         if not token.pushCurrentAttribute():
             beginIndex: int = token.currentAttribute.name.index
             errorLen: int = token.currentAttribute.name.text.__len__()
