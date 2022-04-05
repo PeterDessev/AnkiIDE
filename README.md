@@ -1,6 +1,6 @@
 # AnkiIDE
 
-AnkiIDE adds syntax highlighting to [Anki](https://apps.ankiweb.net/)'s template editor for easier template creation and editing under the `Add` | `Cards...` window in Anki. AnkiIDE is based on [anki-template-editor](https://github.com/ericahn/anki-template-editor) with significant changes both to functionality and user accessibility.
+AnkiIDE adds syntax highlighting to [Anki](https://apps.ankiweb.net/)'s template editor for easier template creation and editing under the `Add` | `Cards...` window in Anki using the [Esprima](https://github.com/jquery/esprima) library. AnkiIDE is based on [anki-template-editor](https://github.com/ericahn/anki-template-editor) with significant changes both to functionality and user accessibility.
 
 ![Screenshot of editor](/docs/example.png)
 
@@ -11,12 +11,11 @@ by going to `Tools` | `Add-ons` | `View Files`
 
 ## Features
 
-AnkiIDE highlights template HTML and Java Script inside of `<script>` tags 
+AnkiIDE highlights HTML and Java Script code in the template editor, allowing near full user customizability. It also has partial error detection in HTML, with future improvements in the works.
 
 ### Planned Features
 
-1. Color Customization
-2. CSS Highlighting under `Styling` tab
-3. Java Script Regex Highlighting
-4. Code Formating
-5. Error Detection
+1.  Better Error Detection
+2.  CSS Highlighting under `Styling` tab
+3.  Java Script Regex Highlighting
+4.  Code Formating
